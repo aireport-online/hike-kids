@@ -8,7 +8,15 @@ Hike Kids is een afsplitsing van [Hike](https://github.com/aireport-online/hike)
 voor volwassenen. De kaart, de routeberekening en de opslag zijn dezelfde; alles eromheen is
 voor kinderen gemaakt. Zie [docs/HUISSTIJL.md](docs/HUISSTIJL.md) voor het ontwerp.
 
-![Mo de marmot](docs/kids/mo-de-marmot.jpg)
+| Hoe oud ben jij? | Hoe ver? | Jouw rondje |
+| --- | --- | --- |
+| ![Leeftijd kiezen](docs/schermen/1-hoe-oud.jpg) | ![Afstand kiezen](docs/schermen/4-hoe-ver.jpg) | ![Een rondje](docs/schermen/5-rondje.jpg) |
+
+| Mijn wandelingen | Wandelpaspoort | Voor ouders |
+| --- | --- | --- |
+| ![Mijn wandelingen](docs/schermen/8-mijn-wandelingen.jpg) | ![Wandelpaspoort](docs/schermen/9-wandelpaspoort.jpg) | ![Voor ouders](docs/schermen/11-voor-ouders.jpg) |
+
+Hoe je de app gebruikt, in een minuut: [docs/hike-kids-gebruik.mp4](docs/hike-kids-gebruik.mp4).
 
 ## Wat een kind ermee doet
 
