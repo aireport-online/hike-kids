@@ -54,7 +54,6 @@ struct ContentView: View {
 
             VStack(spacing: 0) {
                 topControls
-                    .background { heightReader { topInset = $0 } }
                 Spacer(minLength: 0)
                 VStack(spacing: 0) {
                     attribution
@@ -148,6 +147,9 @@ struct ContentView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("searchButton")
+            // Only the search field spans the map's width; the buttons below it are a narrow
+            // column at the edge, which the map allows for when it frames a route.
+            .background { heightReader { topInset = $0 + 10 } }
 
             VStack(spacing: 8) {
                 mapButton("location.fill", label: "Waar ben ik?") {

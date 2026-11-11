@@ -299,7 +299,8 @@ struct MapView: UIViewRepresentable {
                     mapView.setRegion(region, animated: true)
                 } else {
                     let rect = MKMapRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
-                    let padding = UIEdgeInsets(top: 50, left: 40, bottom: 50, right: 40)
+                    // Extra room on the right for the column of round buttons.
+                    let padding = UIEdgeInsets(top: 50, left: 40, bottom: 40, right: 84)
                     mapView.setVisibleMapRect(rect, edgePadding: padding, animated: true)
                 }
             }

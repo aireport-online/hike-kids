@@ -279,6 +279,7 @@ struct RoutePanel: View {
                 Button("Nog eens") { model.retryFailedLegs() }
                 if model.loopTarget != nil {
                     Button("Andere kant") { model.turnLoop() }
+                        .disabled(model.isRouting)
                 } else {
                     Button("Rechte lijn") { model.useStraightLinesForFailedLegs() }
                         .accessibilityIdentifier("straightLineFallbackButton")
