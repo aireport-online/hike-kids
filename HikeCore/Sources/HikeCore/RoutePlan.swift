@@ -37,6 +37,11 @@ public struct RoutePlan: Equatable, Sendable {
         return waypoint
     }
 
+    /// Swaps the whole plan for the given points, as one step that can be undone.
+    public mutating func replaceAll(with coordinates: [Coordinate], mode: LegMode = .trail) {
+        commit(coordinates.map { Waypoint(coordinate: $0, mode: mode) })
+    }
+
     public mutating func move(id: Waypoint.ID, to coordinate: Coordinate) {
         guard let index = waypoints.firstIndex(where: { $0.id == id }),
               waypoints[index].coordinate != coordinate else { return }

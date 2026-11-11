@@ -1,30 +1,27 @@
 import HikeCore
 import SwiftUI
-import UniformTypeIdentifiers
 
-/// The saved routes as plates on a signpost.
+/// The saved walks as plates on a signpost. A walk that was done gets a stamp.
 struct SavedRoutesView: View {
     @Environment(PlannerModel.self) private var model
     @Environment(\.dismiss) private var dismiss
 
-    let pace: Pace
+    let profile: KidProfile
+    var onShowPassport: () -> Void
 
-    @State private var isImporting = false
     @State private var routeAwaitingConfirmation: HikeRoute?
-    @State private var shareItem: ShareItem?
-
-    private static let gpxTypes: [UTType] = [UTType(filenameExtension: "gpx") ?? .xml, .xml]
 
     var body: some View {
         NavigationStack {
             List {
                 ForEach(model.savedRoutes) { route in
-                    Button {
-                        requestOpen(route)
-                    } label: {
-                        RoutePlate(route: route, pace: pace, isCurrent: route.id == model.currentRouteID)
-                    }
-                    .buttonStyle(.plain)
+                    RoutePlate(
+                        route: route,
+                        profile: profile,
+                        isCurrent: route.id == model.currentRouteID,
+                        onOpen: { requestOpen(route) },
+                        onToggleWalked: { model.setWalked(route, walked: route.walkedAt == nil) }
+                    )
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 7, leading: 18, bottom: 7, trailing: 14))
@@ -32,31 +29,22 @@ struct SavedRoutesView: View {
                         Button(role: .destructive) {
                             model.delete(route)
                         } label: {
-                            Label("Verwijder", systemImage: "trash")
+                            Label("Weg", systemImage: "trash")
                         }
-                        Button {
-                            if let url = model.export(route) {
-                                shareItem = ShareItem(url: url)
-                            }
-                        } label: {
-                            Label("Deel", systemImage: "square.and.arrow.up")
-                        }
-                        .tint(Brand.ink)
                     }
                 }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background {
-                // The pole the plates hang on.
-                // It starts below the title bar, so it does not run through the title.
+                // The pole the plates hang on. It starts below the title bar.
                 ZStack {
                     Brand.ground
                         .ignoresSafeArea()
                     if !model.savedRoutes.isEmpty {
-                        Rectangle()
+                        Capsule()
                             .fill(Brand.line)
-                            .frame(width: 10)
+                            .frame(width: 12)
                             .ignoresSafeArea(edges: .bottom)
                     }
                 }
@@ -66,27 +54,20 @@ struct SavedRoutesView: View {
                     emptyState
                 }
             }
-            .signTitle("Mijn routes")
+            .signTitle("Mijn wandelingen")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Sluit") { dismiss() }
-                        .font(.textStrong(17))
+                    Button("Klaar") { dismiss() }
+                        .font(.sign(17))
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        isImporting = true
-                    } label: {
-                        Label("Importeer GPX", systemImage: "square.and.arrow.down")
+                    Button(action: onShowPassport) {
+                        Label("Wandelpaspoort", systemImage: "rosette")
                     }
                 }
             }
-            .fileImporter(isPresented: $isImporting, allowedContentTypes: Self.gpxTypes) { result in
-                if case .success(let url) = result, model.importGPX(from: url) {
-                    dismiss()
-                }
-            }
             .confirmationDialog(
-                "Je huidige route is niet opgeslagen",
+                "Je wandeling op de kaart is nog niet bewaard",
                 isPresented: Binding(
                     get: { routeAwaitingConfirmation != nil },
                     set: { if !$0 { routeAwaitingConfirmation = nil } }
@@ -100,24 +81,19 @@ struct SavedRoutesView: View {
                 }
                 Button("Annuleer", role: .cancel) {}
             }
-            .sheet(item: $shareItem) { item in
-                ActivityView(url: item.url)
-            }
         }
         .tint(Brand.line)
     }
 
     private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "signpost.right")
-                .font(.system(size: 44, weight: .medium))
+        VStack(spacing: 12) {
+            Mascot(pose: .point, size: 120)
+            Text("Nog geen wandelingen")
+                .font(.sign(24, relativeTo: .title2))
                 .foregroundStyle(Brand.line)
-            Text("NOG GEEN ROUTES")
-                .font(.sign(26, relativeTo: .title2))
-                .foregroundStyle(Brand.line)
-            Text("Plan een wandeling op de kaart en bewaar hem, of importeer een GPX-bestand.")
-                .font(.text(16))
-                .foregroundStyle(Brand.line.opacity(0.7))
+            Text("Maak een rondje op de kaart en bewaar het. Dan hangt het hier.")
+                .font(.text(17))
+                .foregroundStyle(Brand.line.opacity(0.75))
                 .multilineTextAlignment(.center)
         }
         .padding(32)
@@ -137,67 +113,69 @@ struct SavedRoutesView: View {
     }
 }
 
-/// One saved route as a signpost plate: where to, how far, how long.
+/// One saved walk as a signpost plate: its name, how far, how long, and whether it was walked.
 private struct RoutePlate: View {
     let route: HikeRoute
-    let pace: Pace
+    let profile: KidProfile
     let isCurrent: Bool
+    var onOpen: () -> Void
+    var onToggleWalked: () -> Void
 
     private let point: CGFloat = 18
 
     var body: some View {
         let stats = route.stats
+        let assessment = KidAssessment(stats: stats, profile: profile)
+        let isWalked = route.walkedAt != nil
 
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(route.name.uppercased())
-                    .font(.sign(22, relativeTo: .title3))
+                Text(route.name)
+                    .font(.sign(21, relativeTo: .title3))
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
-                HStack(spacing: 12) {
-                    figure("arrow.left.and.right", HikeFormat.distance(stats.distance))
-                    if stats.maxElevation != nil {
-                        figure("arrow.up", HikeFormat.elevation(stats.ascent))
-                    }
-                    figure("clock", HikeFormat.duration(stats.duration(pace: pace)))
-                }
-                Text(route.updatedAt.formatted(date: .abbreviated, time: .omitted))
-                    .font(.text(12, relativeTo: .caption))
-                    .foregroundStyle(Brand.ink.opacity(0.65))
+                Text("\(HikeFormat.distance(stats.distance)) · \(HikeFormat.duration(assessment.totalTime)) · \(HikeFormat.count(assessment.steps)) stappen")
+                    .font(.text(15, relativeTo: .subheadline))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onOpen)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Opent de wandeling op de kaart")
+
+            Button(action: onToggleWalked) {
+                VStack(spacing: 0) {
+                    Image(systemName: isWalked ? "checkmark.seal.fill" : "seal")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(isWalked ? Brand.grass : Brand.ink.opacity(0.55))
+                    Text(isWalked ? "Gelopen!" : "Gelopen?")
+                        .font(.sign(13, relativeTo: .caption))
+                }
+                .frame(width: 70, height: 56)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("walkedButton")
+            .accessibilityLabel(isWalked ? "Gelopen. Tik om het stempel weg te halen" : "Zet een stempel: gelopen")
         }
-        .foregroundStyle(Brand.ink)
-        .padding(.leading, 22)
-        .padding(.trailing, point + 8)
+        .padding(.leading, 26)
+        .padding(.trailing, point + 4)
         .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            SignpostShape(point: point).fill(Brand.yellow)
-        }
+        .plate(point: point)
         .overlay(alignment: .leading) {
             // The blaze is painted on the blunt end of the plate.
             BlazeMark()
-                .frame(width: 9)
-                .padding(.vertical, 12)
-                .padding(.leading, 6)
+                .frame(width: 10)
+                .padding(.vertical, 14)
+                .padding(.leading, 8)
         }
         .overlay {
-            SignpostShape(point: point)
-                .stroke(Brand.ink, lineWidth: isCurrent ? 3 : Brand.outline)
-        }
-        .contentShape(SignpostShape(point: point))
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isCurrent ? .isSelected : [])
-    }
-
-    private func figure(_ symbol: String, _ value: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: symbol)
-                .font(.system(size: 11, weight: .bold))
-            Text(value)
-                .font(.signLabel(17, relativeTo: .subheadline))
-                .monospacedDigit()
+            if isCurrent {
+                SignpostShape(point: point).stroke(Brand.ink, lineWidth: 5)
+            }
         }
     }
 }

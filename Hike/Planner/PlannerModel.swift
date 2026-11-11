@@ -48,6 +48,13 @@ final class PlannerModel {
     /// A message the user should see, e.g. a failed import.
     var alertMessage: String?
 
+    // MARK: For children
+
+    /// The length asked for when the route is a generated round trip; nil once it is edited by hand.
+    private(set) var loopTarget: Double?
+    /// Fun places along the finished route, in walking order.
+    private(set) var discoveries: [Discovery] = []
+
     private let provider: LegProvider
     private let store: RouteStore
     @ObservationIgnored private var legCache: [LegKey: [TrackPoint]] = [:]
@@ -55,7 +62,23 @@ final class PlannerModel {
     @ObservationIgnored private var routingTask: Task<Void, Never>?
     @ObservationIgnored private var cameraCounter = 0
 
-    init(service: RoutingService? = nil, store: RouteStore? = nil) {
+    private let discoveryService: DiscoveryService
+    /// How long a finished route must stand before fun places are looked up, in nanoseconds.
+    private let discoveryDelay: UInt64
+    @ObservationIgnored private var discoveryTask: Task<Void, Never>?
+    @ObservationIgnored private var loopBearing = 30.0
+    @ObservationIgnored private var loopDetour = LoopPlanner.defaultDetourFactor
+    @ObservationIgnored private var loopCorrections = 0
+    @ObservationIgnored private var loopTurnsAfterFailure = 0
+
+    init(
+        service: RoutingService? = nil,
+        store: RouteStore? = nil,
+        discoveryService: DiscoveryService? = nil,
+        discoveryDelay: UInt64 = 800_000_000
+    ) {
+        self.discoveryService = discoveryService ?? PhotonClient()
+        self.discoveryDelay = discoveryDelay
         self.provider = LegProvider(service: service ?? BRouterClient())
         self.store = store ?? RouteStore(
             directory: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -132,8 +155,104 @@ final class PlannerModel {
         selectedWaypointID = nil
         scrubDistance = nil
         failures = [:]
+        loopTarget = nil
         refreshRoute()
         hasUnsavedChanges = false
+    }
+
+    // MARK: Round trips
+
+    /// Replaces the plan by a round trip of about `distance` metres from the first waypoint.
+    func makeLoop(distance: Double) {
+        guard let start = plan.waypoints.first?.coordinate else { return }
+        resetLoopAttempts()
+        applyLoop(from: start, distance: distance, replacingLastAttempt: false)
+    }
+
+    /// The same round trip, laid out in another direction.
+    func turnLoop() {
+        guard let distance = loopTarget, let start = plan.waypoints.first?.coordinate else { return }
+        resetLoopAttempts()
+        loopBearing = (loopBearing + 72).truncatingRemainder(dividingBy: 360)
+        applyLoop(from: start, distance: distance, replacingLastAttempt: false)
+    }
+
+    private func resetLoopAttempts() {
+        loopDetour = LoopPlanner.defaultDetourFactor
+        loopCorrections = 0
+        loopTurnsAfterFailure = 0
+    }
+
+    private func applyLoop(from start: Coordinate, distance: Double, replacingLastAttempt: Bool) {
+        if replacingLastAttempt {
+            // A correction of our own takes the place of the attempt it corrects, so that one
+            // "undo" still takes the child back to before the loop.
+            plan.undo()
+        }
+        plan.replaceAll(with: LoopPlanner.waypoints(
+            start: start,
+            targetDistance: distance,
+            bearing: loopBearing,
+            detourFactor: loopDetour
+        ))
+        // Set first: answering from the cache finishes routing before planChanged returns.
+        loopTarget = distance
+        planChanged(keepingLoop: true)
+    }
+
+    /// Called when every stretch has been answered. A generated loop that failed is tried in
+    /// another direction; one that came out much too long or short is drawn again to size.
+    private func routingFinished() {
+        if let distance = loopTarget, let start = plan.waypoints.first?.coordinate {
+            if routingError != nil, loopTurnsAfterFailure < 4 {
+                loopTurnsAfterFailure += 1
+                loopBearing = (loopBearing + 72).truncatingRemainder(dividingBy: 360)
+                applyLoop(from: start, distance: distance, replacingLastAttempt: true)
+                return
+            }
+            if isComplete, loopCorrections < 1, abs(stats.distance - distance) / distance > 0.25 {
+                loopCorrections += 1
+                loopDetour = LoopPlanner.adjustedDetourFactor(
+                    current: loopDetour,
+                    targetDistance: distance,
+                    actualDistance: stats.distance
+                )
+                applyLoop(from: start, distance: distance, replacingLastAttempt: true)
+                return
+            }
+            if isComplete {
+                fitRoute()
+            }
+        }
+        refreshDiscoveries()
+    }
+
+    // MARK: Discoveries
+
+    private func refreshDiscoveries() {
+        discoveryTask?.cancel()
+        discoveryTask = nil
+        // Long routes cover too large an area to ask a shared service about.
+        guard isComplete, let area = DiscoveryFinder.searchArea(for: geometry), area.radius <= 8000 else {
+            discoveries = []
+            return
+        }
+        let geometry = self.geometry
+        let service = discoveryService
+        let delay = discoveryDelay
+        discoveryTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: delay)
+            if Task.isCancelled { return }
+            var places = try? await service.discoveries(near: area.center, radius: area.radius, kinds: Discovery.Kind.allCases)
+            if places == nil, !Task.isCancelled {
+                // The shared service turns requests away now and then; one more try is fair.
+                try? await Task.sleep(nanoseconds: delay * 3)
+                if Task.isCancelled { return }
+                places = try? await service.discoveries(near: area.center, radius: area.radius, kinds: Discovery.Kind.allCases)
+            }
+            guard let self, !Task.isCancelled else { return }
+            self.discoveries = DiscoveryFinder.along(geometry, places: places ?? [])
+        }
     }
 
     func retryFailedLegs() {
@@ -152,10 +271,15 @@ final class PlannerModel {
         planChanged()
     }
 
-    private func planChanged() {
+    private func planChanged(keepingLoop: Bool = false) {
         if let selectedWaypointID, !plan.waypoints.contains(where: { $0.id == selectedWaypointID }) {
             self.selectedWaypointID = nil
         }
+        if !keepingLoop {
+            loopTarget = nil
+        }
+        discoveryTask?.cancel()
+        discoveries = []
         scrubDistance = nil
         hasUnsavedChanges = !plan.isEmpty || currentRouteID != nil
         refreshRoute()
@@ -174,6 +298,7 @@ final class PlannerModel {
         }
         guard !missing.isEmpty else {
             isRouting = false
+            routingFinished()
             return
         }
 
@@ -197,7 +322,9 @@ final class PlannerModel {
                 }
                 self.rebuildTrack()
             }
-            self?.isRouting = false
+            guard let self, !Task.isCancelled else { return }
+            self.isRouting = false
+            self.routingFinished()
         }
     }
 
@@ -287,8 +414,26 @@ final class PlannerModel {
             createdAt: existing?.createdAt ?? now,
             updatedAt: now,
             waypoints: plan.waypoints,
-            legs: legs
+            legs: legs,
+            walkedAt: existing?.walkedAt
         )
+    }
+
+    /// Marks a saved route as walked today, or as a plan again.
+    func setWalked(_ route: HikeRoute, walked: Bool) {
+        var updated = route
+        updated.walkedAt = walked ? Date() : nil
+        do {
+            try store.save(updated)
+            savedRoutes = store.all()
+        } catch {
+            alertMessage = "Bewaren is mislukt: \(error.localizedDescription)"
+        }
+    }
+
+    /// Everything that was walked, added up, with the badges it earned.
+    var passport: Passport {
+        Passport(routes: savedRoutes)
     }
 
     func open(_ route: HikeRoute) {
@@ -302,6 +447,9 @@ final class PlannerModel {
         scrubDistance = nil
         failures = [:]
         searchPin = nil
+        loopTarget = nil
+        discoveryTask?.cancel()
+        discoveries = []
         refreshRoute()
         hasUnsavedChanges = false
         fitRoute()

@@ -10,6 +10,8 @@ struct MapView: UIViewRepresentable {
     /// Bumped whenever `segments` changes; cheaper to compare than thousands of coordinates.
     var segmentsVersion: Int
     var waypoints: [Waypoint]
+    /// Fun places along the route, shown as small picture markers.
+    var discoveries: [Discovery]
     var scrubCoordinate: Coordinate?
     var searchPin: MapPin?
     var camera: CameraCommand?
@@ -42,6 +44,7 @@ struct MapView: UIViewRepresentable {
         mapView.register(WaypointAnnotationView.self, forAnnotationViewWithReuseIdentifier: Coordinator.waypointReuseID)
         mapView.register(MKMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: Coordinator.searchPinReuseID)
         mapView.register(MKAnnotationView.self, forAnnotationViewWithReuseIdentifier: Coordinator.scrubReuseID)
+        mapView.register(MKAnnotationView.self, forAnnotationViewWithReuseIdentifier: Coordinator.discoveryReuseID)
         mapView.setRegion(Self.initialRegion(), animated: false)
 
         // The double tap does nothing itself; it only makes the single tap wait, so zooming with
@@ -69,6 +72,7 @@ struct MapView: UIViewRepresentable {
         coordinator.applyTiles(to: mapView)
         coordinator.applyRoute(to: mapView)
         coordinator.applyWaypoints(to: mapView)
+        coordinator.applyDiscoveries(to: mapView)
         coordinator.applyScrub(to: mapView)
         coordinator.applySearchPin(to: mapView)
         coordinator.applyCamera(to: mapView)
@@ -102,6 +106,7 @@ struct MapView: UIViewRepresentable {
         static let waypointReuseID = "waypoint"
         static let searchPinReuseID = "searchPin"
         static let scrubReuseID = "scrub"
+        static let discoveryReuseID = "discovery"
 
         var parent: MapView
 
@@ -109,6 +114,7 @@ struct MapView: UIViewRepresentable {
         private var appliedShowsTrails: Bool?
         private var appliedSegmentsVersion = -1
         private var appliedWaypoints: [Waypoint]?
+        private var appliedDiscoveries: [Discovery]?
         private var appliedSearchPin: MapPin?
         private var appliedCameraID: Int?
         private var appliedInsets: UIEdgeInsets?
@@ -220,6 +226,13 @@ struct MapView: UIViewRepresentable {
                 return WaypointAnnotation(waypoint: waypoint, index: index, role: role)
             }
             mapView.addAnnotations(annotations)
+        }
+
+        func applyDiscoveries(to mapView: MKMapView) {
+            guard appliedDiscoveries != parent.discoveries else { return }
+            appliedDiscoveries = parent.discoveries
+            mapView.removeAnnotations(mapView.annotations.filter { $0 is DiscoveryAnnotation })
+            mapView.addAnnotations(parent.discoveries.map(DiscoveryAnnotation.init))
         }
 
         func applyScrub(to mapView: MKMapView) {
@@ -411,6 +424,17 @@ struct MapView: UIViewRepresentable {
                 return view
             }
 
+            if let discovery = annotation as? DiscoveryAnnotation {
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: Self.discoveryReuseID, for: annotation)
+                view.image = MarkerArt.discovery(discovery.emoji)
+                view.centerOffset = .zero
+                // Tapping it shows what it is called.
+                view.canShowCallout = true
+                view.displayPriority = .defaultHigh
+                view.zPriority = .defaultUnselected
+                return view
+            }
+
             if annotation is ScrubAnnotation {
                 let view = mapView.dequeueReusableAnnotationView(withIdentifier: Self.scrubReuseID, for: annotation)
                 view.image = MarkerArt.scrub
@@ -496,6 +520,19 @@ final class SearchPinAnnotation: MKPointAnnotation {}
 
 /// The spot on the route that belongs to the finger position on the elevation profile.
 final class ScrubAnnotation: MKPointAnnotation {}
+
+/// A fun place along the route.
+final class DiscoveryAnnotation: MKPointAnnotation {
+    let emoji: String
+
+    init(_ discovery: Discovery) {
+        emoji = discovery.kind.emoji
+        super.init()
+        coordinate = discovery.coordinate.clCoordinate
+        title = discovery.name
+        subtitle = discovery.kind.title
+    }
+}
 
 /// A waypoint marker that can be picked up and dragged: hold it for a moment, then move.
 ///
@@ -704,6 +741,34 @@ enum MarkerArt {
             )
         }
         viaCache[number] = image
+        return image
+    }
+
+    private static var discoveryCache: [String: UIImage] = [:]
+
+    /// A fun place: its picture on a white disc.
+    static func discovery(_ emoji: String) -> UIImage {
+        if let cached = discoveryCache[emoji] {
+            return cached
+        }
+        let size = CGSize(width: 34, height: 34)
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            let cg = context.cgContext
+            let bounds = CGRect(origin: .zero, size: size)
+            cg.setFillColor(Brand.UI.ink.cgColor)
+            cg.fillEllipse(in: bounds.insetBy(dx: 1, dy: 1))
+            cg.setFillColor(UIColor.white.cgColor)
+            cg.fillEllipse(in: bounds.insetBy(dx: 3, dy: 3))
+
+            let text = emoji as NSString
+            let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 18)]
+            let textSize = text.size(withAttributes: attributes)
+            text.draw(
+                at: CGPoint(x: (size.width - textSize.width) / 2, y: (size.height - textSize.height) / 2),
+                withAttributes: attributes
+            )
+        }
+        discoveryCache[emoji] = image
         return image
     }
 

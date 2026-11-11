@@ -1,72 +1,50 @@
-# Huisstijl: Wegwijzer
+# Huisstijl: Hike Kids
 
-Hike 2 ziet eruit als wat je onderweg tegenkomt: de gele wandelwegwijzer en de wit-rood-witte
-markering op rotsen en palen. Alles in de app is daarvan afgeleid.
+Hike Kids neemt de gele wandelwegwijzer van Hike over en maakt hem rond, groot en vriendelijk,
+met Mo de marmot als wandelmaatje.
 
-![Ontwerp van de drie hoofdschermen](huisstijl/ontwerp-wegwijzer.jpg)
+![Mo de marmot](kids/mo-de-marmot.jpg)
+
+## Mo
+
+Mo is een alpenmarmot met een gele rugzak en een rood-witte halsdoek. Hij stelt de vragen
+("Waar beginnen we?", "Hoe ver wil je lopen?") en juicht in het wandelpaspoort. Er zijn drie
+houdingen: zwaaien, juichen en wijzen. Mo staat altijd in een ronde, hemelsblauwe lijst.
 
 ## Kleur
 
 | Naam | Waarde | Gebruik |
 | --- | --- | --- |
-| Wegwijzergeel | `#FFD400` | Borden: het routepaneel, bewaarde routes, de gekozen kaart, de routelijn |
-| Inkt | `#1A1A1A` | Belettering op geel, omlijning, de hoofdknop |
-| Markeringsrood | `#E3262E` | Alleen als accent: de streep onder een kop, waarschuwingen, de markering |
-| Papier | wit / `#212121` in donkere modus | Achtergrond van vensters en witte knoppen |
-
-Geel draagt altijd inktkleurige inhoud, ook in de donkere modus: een bord blijft een bord.
+| Wegwijzergeel | `#FFD400` | Borden: het wandelpaneel, bewaarde wandelingen, gehaalde stempels, de routelijn |
+| Inkt | `#1A1A1A` | Letters op geel, dikke omlijning, de hoofdknop |
+| Hemelsblauw | `#B5E3FC` | Achter Mo en op het welkomstscherm |
+| Grasgroen | `#5BBF6A` | "Lekker rondje!" en het stempel "Gelopen!" |
+| Markeringsrood | `#E3262E` | Alleen als accent: "erg ver", foutmeldingen, de markering |
 
 ## Letter
 
-- **Barlow Condensed Bold**, in kapitalen, voor koppen en cijfers. Barlow is getekend naar
-  verkeers- en bewegwijzeringsborden.
-- **Barlow Medium / SemiBold** voor lopende tekst en kleine labels.
-
-Cijfers staan groot, de eenheid klein ernaast: `12,4 km`, `2 u 5 min`.
-
-Barlow valt onder de SIL Open Font License; de licentie staat bij de lettertypebestanden in
+**Fredoka** (SemiBold voor koppen, cijfers en knoppen; Medium voor lopende tekst), in gewone
+zinnen met hoofdletter en kleine letters: dat leest voor beginnende lezers makkelijker dan
+kapitalen. Fredoka valt onder de SIL Open Font License; de licentie staat bij de bestanden in
 `Hike/Brand/Fonts/`.
 
 ## Vorm
 
-- **Het bord**: een rechthoek met één punt. Het routepaneel, elke bewaarde route en het
-  opslaan-venster zijn borden. Bewaarde routes hangen onder elkaar aan een paal.
-- **De markering**: wit-rood-wit, op de punt of het uiteinde van een bord, en als vinkje bij
-  de gekozen kaart.
-- **Witte knoppen** hebben een inktlijn van 1,5 pt en bijna rechte hoeken (4 pt), als gesneden
-  plaatwerk. Geen kleurverloop, geen glas, hooguit een dunne schaduw onder een bord op de kaart.
+- **Het bord** met één punt, nu met ronde hoeken en een dikke inktlijn (2,5 pt).
+- **Knoppen** zijn minstens 52 pt hoog, wit met een dikke lijn; de hoofdknop is inkt met gele letters.
+- **Plekken onderweg** zijn plaatjes op een wit rondje: 🛝 🔭 🧺 🐐 🍦 🏰 💦 ⛰️.
+- **Stempels** in het wandelpaspoort zijn geel als ze gehaald zijn en grijs gestippeld als ze nog te halen zijn.
 
-## Kaart
+## Taal
 
-- De route is een **gele lijn met inktrand**: de bordkleuren, en op elke kaartsoort zichtbaar.
-  Een stuk in rechte lijn is gestreept; een stuk dat nog berekend wordt is een dunne inktstippellijn,
-  een mislukt stuk een rode.
-- **Start** is een inktring, **tussenpunten** zijn genummerde gele schijfjes, **het eind** is
-  een vlag op het punt zelf.
+Korte zinnen, je en jij, geen vaktaal: "Hoe ver wil je lopen?", "Oeps! Hier vind ik geen
+wandelpad." Wat voor ouders bedoeld is staat achter een som en gebruikt u.
 
-![Ontwerp van de overige schermen](huisstijl/ontwerp-schermen.jpg)
+## Ontwerp
 
-## In de code
+De schermen, Mo en het icoon zijn eerst als beeld ontworpen met de beeldgenerator van
+ElevenLabs en daarna in code nagebouwd.
 
-Alles staat in `Hike/Brand/`:
+![Ontwerp van de schermen](kids/ontwerp-schermen.jpg)
 
-| Bestand | Inhoud |
-| --- | --- |
-| `Brand.swift` | Kleuren, maten, lettertypen en het registreren ervan |
-| `Shapes.swift` | `SignpostShape` (het bord), `BlazeMark` (de markering), `SignHeading` (kop met rode streep) |
-| `Controls.swift` | `InkButtonStyle`, `OutlineButtonStyle`, `SignSwitch`, `signTitle` |
-
-De markers en de routelijn worden getekend in `Hike/Map/MapView.swift` (`MarkerArt`).
-
-## Hoe het ontwerp tot stand kwam
-
-De schermen zijn eerst als beeld ontworpen met de beeldgenerator van ElevenLabs, in drie
-richtingen. Wegwijzer is gekozen omdat het de enige is die je niet met een andere wandel-app
-verwart en die helemaal in code te maken is. De andere twee:
-
-| Atlas | Alpenglow |
-| --- | --- |
-| ![Atlas](huisstijl/verkenning-atlas.jpg) | ![Alpenglow](huisstijl/verkenning-alpenglow.jpg) |
-| Oude alpenclubkaart: papier, sparrengroen, gravures | Schemering: donker met een koraal-amber verloop |
-
-Het app-icoon is op dezelfde manier ontworpen en daarna vierkant gemaakt.
+In de code staat alles in `Hike/Brand/`; Mo staat in `Hike/Assets.xcassets`.

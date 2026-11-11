@@ -2,18 +2,22 @@ import CoreText
 import SwiftUI
 import UIKit
 
-/// The "Wegwijzer" identity: the yellow hiking signpost and the white-red-white blaze painted
-/// along Europe's trails. Signal yellow plates, charcoal ink, one accent of blaze red, and
-/// condensed signage lettering.
+/// The identity of Hike Kids: the yellow hiking signpost of the grown-up app, made round and
+/// friendly. Signal yellow plates, charcoal ink, sky and grass as playful accents, and a soft
+/// rounded letter that beginning readers find easy.
 enum Brand {
     // MARK: Colours
 
     /// Signpost yellow. Always carries ink-coloured content, in light and dark mode alike.
     static let yellow = Color(uiColor: UI.yellow)
-    /// Charcoal: lettering on yellow, the route outline, primary buttons.
+    /// Charcoal: lettering on yellow, the route outline, the main button.
     static let ink = Color(uiColor: UI.ink)
-    /// The red of a trail blaze. An accent only: rules, warnings, the selected mark.
+    /// The red of a trail blaze. An accent only: warnings and the blaze mark.
     static let blaze = Color(uiColor: UI.blaze)
+    /// Sky blue: behind the mascot, and for calm highlights.
+    static let sky = Color(uiColor: UI.sky)
+    /// Grass green: "this is a good walk for you".
+    static let grass = Color(uiColor: UI.grass)
     /// Background of sheets and white controls.
     static let paper = Color(uiColor: UI.paper)
     /// Page background behind plates and cards.
@@ -25,6 +29,8 @@ enum Brand {
         static let yellow = UIColor(red: 1.0, green: 0.831, blue: 0.0, alpha: 1)
         static let ink = UIColor(red: 0.102, green: 0.102, blue: 0.102, alpha: 1)
         static let blaze = UIColor(red: 0.890, green: 0.149, blue: 0.180, alpha: 1)
+        static let sky = UIColor(red: 0.710, green: 0.890, blue: 0.988, alpha: 1)
+        static let grass = UIColor(red: 0.357, green: 0.749, blue: 0.416, alpha: 1)
         static let paper = UIColor { traits in
             traits.userInterfaceStyle == .dark ? UIColor(white: 0.13, alpha: 1) : .white
         }
@@ -40,20 +46,20 @@ enum Brand {
 
     // MARK: Measures
 
-    /// Width of outlines around white controls and plates.
-    static let outline: CGFloat = 1.5
-    /// Corners are nearly square, like cut sheet metal.
-    static let corner: CGFloat = 4
+    /// Outlines are thick, like a felt-tip drawing.
+    static let outline: CGFloat = 2.5
+    /// Corners are generously rounded.
+    static let corner: CGFloat = 14
+    /// Nothing a child must tap is smaller than this.
+    static let tapTarget: CGFloat = 52
 
     // MARK: Fonts
 
     enum FontName {
-        static let sign = "BarlowCondensed-Bold"
-        static let signLight = "BarlowCondensed-SemiBold"
-        static let text = "Barlow-Medium"
-        static let textStrong = "Barlow-SemiBold"
+        static let sign = "Fredoka-SemiBold"
+        static let text = "Fredoka-Medium"
 
-        static let all = [sign, signLight, text, textStrong]
+        static let all = [sign, text]
     }
 
     /// Makes the bundled fonts available. Call once, before the first view is built.
@@ -69,22 +75,13 @@ enum Brand {
 }
 
 extension Font {
-    /// Signage lettering for headings and figures. Meant to be set in capitals.
+    /// Headings, figures and buttons.
     static func sign(_ size: CGFloat, relativeTo style: Font.TextStyle = .title3) -> Font {
         .custom(Brand.FontName.sign, size: size, relativeTo: style)
     }
 
-    /// Lighter signage lettering for units and small captions.
-    static func signLabel(_ size: CGFloat, relativeTo style: Font.TextStyle = .caption) -> Font {
-        .custom(Brand.FontName.signLight, size: size, relativeTo: style)
-    }
-
-    /// Running text.
+    /// Running text and small labels.
     static func text(_ size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
         .custom(Brand.FontName.text, size: size, relativeTo: style)
-    }
-
-    static func textStrong(_ size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
-        .custom(Brand.FontName.textStrong, size: size, relativeTo: style)
     }
 }

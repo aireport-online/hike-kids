@@ -29,19 +29,19 @@ struct SearchView: View {
                             .foregroundStyle(Brand.line)
                             .frame(width: 34)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(place.name.uppercased())
-                                .font(.sign(21, relativeTo: .title3))
+                            Text(place.name)
+                                .font(.sign(20, relativeTo: .title3))
                                 .foregroundStyle(Brand.line)
                             Text(subtitle(for: place))
-                                .font(.text(14, relativeTo: .subheadline))
-                                .foregroundStyle(Brand.line.opacity(0.65))
+                                .font(.text(15, relativeTo: .subheadline))
+                                .foregroundStyle(Brand.line.opacity(0.7))
                         }
                         Spacer(minLength: 0)
                         Image(systemName: "chevron.right")
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Brand.line.opacity(0.5))
                     }
-                    .padding(.vertical, 3)
+                    .padding(.vertical, 6)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -59,13 +59,13 @@ struct SearchView: View {
             .searchable(
                 text: $query,
                 placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "Plaats, berg, meer of hut"
+                prompt: "Dorp, bos, berg of meer"
             )
             .autocorrectionDisabled()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Sluit") { dismiss() }
-                        .font(.textStrong(17))
+                    Button("Klaar") { dismiss() }
+                        .font(.sign(17))
                 }
             }
             .task(id: query) {
@@ -79,17 +79,17 @@ struct SearchView: View {
     private var placeholder: some View {
         let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if let failure {
-            message("ZOEKEN LUKT NIET", symbol: "wifi.slash", detail: failure)
+            message("Zoeken lukt nu niet", symbol: "wifi.slash", detail: failure)
         } else if isSearching {
             ProgressView()
         } else if text.count < 2 {
             message(
-                "WAAR WIL JE WANDELEN?",
+                "Waar wil je wandelen?",
                 symbol: "mountain.2",
-                detail: "Zoek door heel Europa op plaatsnaam, bergtop, meer, pas of berghut."
+                detail: "Typ de naam van een dorp, een bos, een berg of een meer."
             )
         } else {
-            message("NIETS GEVONDEN", symbol: "magnifyingglass", detail: "Geen plaats gevonden voor \u{201C}\(text)\u{201D}.")
+            message("Niets gevonden", symbol: "magnifyingglass", detail: "Ik vind geen plek die \u{201C}\(text)\u{201D} heet.")
         }
     }
 
@@ -99,10 +99,10 @@ struct SearchView: View {
                 .font(.system(size: 40, weight: .medium))
                 .foregroundStyle(Brand.line)
             Text(title)
-                .font(.sign(26, relativeTo: .title2))
+                .font(.sign(24, relativeTo: .title2))
                 .foregroundStyle(Brand.line)
             Text(detail)
-                .font(.text(16))
+                .font(.text(17))
                 .foregroundStyle(Brand.line.opacity(0.7))
                 .multilineTextAlignment(.center)
         }

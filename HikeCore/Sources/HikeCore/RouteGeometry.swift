@@ -55,6 +55,41 @@ public struct RouteGeometry: Equatable, Sendable {
         return (0..<maxSamples).map { all[Int((Double($0) * step).rounded())] }
     }
 
+    /// How far `coordinate` is from the track, and how far along the track that nearest spot is.
+    public func nearest(to coordinate: Coordinate) -> (distanceFromTrack: Double, distanceAlong: Double)? {
+        guard !points.isEmpty else { return nil }
+        // Flat-earth metres around the point: fine for the few hundred metres that matter here.
+        let metresPerDegreeLatitude = 111_320.0
+        let metresPerDegreeLongitude = 111_320.0 * cos(coordinate.latitude * .pi / 180)
+        func local(_ other: Coordinate) -> (x: Double, y: Double) {
+            ((other.longitude - coordinate.longitude) * metresPerDegreeLongitude,
+             (other.latitude - coordinate.latitude) * metresPerDegreeLatitude)
+        }
+
+        var best = (distanceFromTrack: Double.infinity, distanceAlong: 0.0)
+        var previous = local(points[0].coordinate)
+        if points.count == 1 {
+            return ((previous.x * previous.x + previous.y * previous.y).squareRoot(), 0)
+        }
+        for index in 1..<points.count {
+            let current = local(points[index].coordinate)
+            let dx = current.x - previous.x
+            let dy = current.y - previous.y
+            let lengthSquared = dx * dx + dy * dy
+            // Where on this segment the point's perpendicular falls, clamped to the segment.
+            let fraction = lengthSquared > 0 ? max(0, min(1, -(previous.x * dx + previous.y * dy) / lengthSquared)) : 0
+            let nearX = previous.x + fraction * dx
+            let nearY = previous.y + fraction * dy
+            let distance = (nearX * nearX + nearY * nearY).squareRoot()
+            if distance < best.distanceFromTrack {
+                let segment = cumulativeDistances[index] - cumulativeDistances[index - 1]
+                best = (distance, cumulativeDistances[index - 1] + fraction * segment)
+            }
+            previous = current
+        }
+        return best
+    }
+
     /// The position on the track at `distance` metres from the start, clamped to the track.
     public func coordinate(atDistance distance: Double) -> Coordinate? {
         guard let first = points.first, let last = points.last else { return nil }

@@ -21,6 +21,18 @@ public struct Coordinate: Codable, Hashable, Sendable {
         return 2 * earthRadius * asin(min(1, sqrt(a)))
     }
 
+    /// The point `distance` metres away in the direction `bearing` (degrees, 0 is north, 90 east).
+    public func destination(distance: Double, bearing: Double) -> Coordinate {
+        let earthRadius = 6_371_008.8
+        let angular = distance / earthRadius
+        let heading = bearing * .pi / 180
+        let lat1 = latitude * .pi / 180
+        let lon1 = longitude * .pi / 180
+        let lat2 = asin(sin(lat1) * cos(angular) + cos(lat1) * sin(angular) * cos(heading))
+        let lon2 = lon1 + atan2(sin(heading) * sin(angular) * cos(lat1), cos(angular) - sin(lat1) * sin(lat2))
+        return Coordinate(latitude: lat2 * 180 / .pi, longitude: lon2 * 180 / .pi)
+    }
+
     /// Linear interpolation, accurate enough for the short segments of a hiking track.
     public func interpolated(to other: Coordinate, fraction: Double) -> Coordinate {
         Coordinate(

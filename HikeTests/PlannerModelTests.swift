@@ -22,6 +22,27 @@ private actor StubService: RoutingService {
     }
 }
 
+/// Answers with fixed places, or fails the first `failures` times.
+private actor StubDiscoveries: DiscoveryService {
+    var places: [Discovery]
+    var failures: Int
+    private(set) var calls = 0
+
+    init(places: [Discovery] = [], failures: Int = 0) {
+        self.places = places
+        self.failures = failures
+    }
+
+    func discoveries(near center: Coordinate, radius: Double, kinds: [Discovery.Kind]) async throws -> [Discovery] {
+        calls += 1
+        if failures > 0 {
+            failures -= 1
+            throw PlaceSearchError.unavailable
+        }
+        return places
+    }
+}
+
 @MainActor
 final class PlannerModelTests: XCTestCase {
     private let directory = FileManager.default.temporaryDirectory.appendingPathComponent("planner-\(UUID().uuidString)")
@@ -29,8 +50,22 @@ final class PlannerModelTests: XCTestCase {
     private let b = Coordinate(latitude: 46.02, longitude: 8.00)
     private let c = Coordinate(latitude: 46.04, longitude: 8.00)
 
-    private func makeModel(_ service: StubService) -> PlannerModel {
-        PlannerModel(service: service, store: RouteStore(directory: directory))
+    private func makeModel(_ service: StubService, discoveries: StubDiscoveries = StubDiscoveries()) -> PlannerModel {
+        PlannerModel(
+            service: service,
+            store: RouteStore(directory: directory),
+            discoveryService: discoveries,
+            discoveryDelay: 1_000_000
+        )
+    }
+
+    /// Waits until routing and any automatic loop correction have settled.
+    private func settleLoop(_ model: PlannerModel) async throws {
+        for _ in 0..<5 {
+            try await settle(model)
+            try await Task.sleep(nanoseconds: 10_000_000)
+            if !model.isRouting { return }
+        }
     }
 
     private func settle(_ model: PlannerModel) async throws {
@@ -211,6 +246,118 @@ final class PlannerModelTests: XCTestCase {
         try await settle(model)
         XCTAssertEqual(model.waypoints[1].coordinate, moved)
         XCTAssertEqual(model.markers[1].coordinate.longitude, 8.021, accuracy: 1e-9)
+    }
+
+    func testMakingALoopFromTheStartPointAndTurningIt() async throws {
+        let service = StubService()
+        let model = makeModel(service)
+        model.makeLoop(distance: 4000)
+        XCTAssertTrue(model.waypoints.isEmpty, "a loop needs a starting point")
+
+        model.addWaypoint(a)
+        model.makeLoop(distance: 4000)
+        try await settleLoop(model)
+        XCTAssertTrue(model.isComplete)
+        XCTAssertTrue(model.isLoop)
+        XCTAssertEqual(model.loopTarget, 4000)
+        XCTAssertEqual(model.waypoints.first?.coordinate, a)
+        // The stub routes in straight lines, so the first attempt is 35% short and is drawn
+        // again; the result is close to what was asked.
+        XCTAssertEqual(model.stats.distance, 4000, accuracy: 4000 * 0.25)
+        if case .fit? = model.camera?.request {} else { XCTFail("the map should show the whole loop") }
+        let far = try XCTUnwrap(model.waypoints.dropFirst(2).first?.coordinate)
+
+        model.turnLoop()
+        try await settleLoop(model)
+        XCTAssertTrue(model.isComplete)
+        XCTAssertEqual(model.loopTarget, 4000)
+        XCTAssertNotEqual(model.waypoints.dropFirst(2).first?.coordinate, far)
+
+        // Undo steps back one user action at a time: the turn, then the loop itself.
+        model.undo()
+        model.undo()
+        XCTAssertEqual(model.waypoints.map(\.coordinate), [a])
+        XCTAssertNil(model.loopTarget)
+    }
+
+    func testEditingALoopByHandMakesItAnOrdinaryRoute() async throws {
+        let model = makeModel(StubService())
+        model.addWaypoint(a)
+        model.makeLoop(distance: 2000)
+        try await settleLoop(model)
+        XCTAssertNotNil(model.loopTarget)
+        model.addWaypoint(c)
+        try await settle(model)
+        XCTAssertNil(model.loopTarget)
+        model.turnLoop()
+        XCTAssertEqual(model.waypoints.last?.coordinate, c)
+    }
+
+    func testALoopThatCannotBeRoutedIsTriedInOtherDirectionsThenReported() async throws {
+        let service = StubService()
+        await service.setFailing(true)
+        let model = makeModel(service)
+        model.addWaypoint(a)
+        model.makeLoop(distance: 2000)
+        try await settleLoop(model)
+        XCTAssertFalse(model.isComplete)
+        XCTAssertEqual(model.routingError, .noRouteFound)
+        // The first direction plus four more.
+        let attempts = await service.calls.count
+        XCTAssertEqual(attempts, 5 * 4)
+        // All those attempts are still one step to undo.
+        model.undo()
+        XCTAssertEqual(model.waypoints.map(\.coordinate), [a])
+    }
+
+    func testDiscoveriesAlongAFinishedRoute() async throws {
+        let onTheWay = Discovery(name: "Speeltuin", kind: .playground, coordinate: Coordinate(latitude: 46.01, longitude: 8.0005))
+        let farAway = Discovery(name: "Ver weg", kind: .viewpoint, coordinate: Coordinate(latitude: 46.01, longitude: 8.2))
+        let finder = StubDiscoveries(places: [farAway, onTheWay], failures: 1)
+        let model = makeModel(StubService(), discoveries: finder)
+        model.addWaypoint(a)
+        XCTAssertTrue(model.discoveries.isEmpty)
+        model.addWaypoint(b)
+        try await settle(model)
+        for _ in 0..<200 where model.discoveries.isEmpty { try await Task.sleep(nanoseconds: 5_000_000) }
+
+        // The first request failed and was tried once more; only the place on the way is kept.
+        XCTAssertEqual(model.discoveries.map(\.name), ["Speeltuin"])
+        let calls = await finder.calls
+        XCTAssertEqual(calls, 2)
+        XCTAssertEqual(model.discoveries[0].distanceAlong, a.distance(to: Coordinate(latitude: 46.01, longitude: 8)), accuracy: 30)
+
+        // Editing the route clears them at once; they come back for the new route.
+        model.addWaypoint(c)
+        XCTAssertTrue(model.discoveries.isEmpty)
+        try await settle(model)
+        for _ in 0..<200 where model.discoveries.isEmpty { try await Task.sleep(nanoseconds: 5_000_000) }
+        XCTAssertEqual(model.discoveries.map(\.name), ["Speeltuin"])
+    }
+
+    func testWalkedRoutesFillThePassport() async throws {
+        let model = makeModel(StubService())
+        for coordinate in [a, b, c] { model.addWaypoint(coordinate) }
+        try await settle(model)
+        model.save(name: "Bostocht")
+        XCTAssertEqual(model.passport.walks, 0)
+
+        let saved = try XCTUnwrap(model.savedRoutes.first)
+        model.setWalked(saved, walked: true)
+        XCTAssertNotNil(model.savedRoutes.first?.walkedAt)
+        XCTAssertEqual(model.passport.walks, 1)
+        XCTAssertEqual(model.passport.distance, a.distance(to: c), accuracy: 1)
+        XCTAssertTrue(model.passport.badges.first { $0.id == "first" }?.isEarned == true)
+
+        // Saving the route again keeps the stamp; a fresh launch still has it.
+        model.closeLoop()
+        try await settle(model)
+        model.save(name: "Bostocht")
+        XCTAssertNotNil(model.savedRoutes.first?.walkedAt)
+        XCTAssertEqual(makeModel(StubService()).passport.walks, 1)
+
+        model.setWalked(try XCTUnwrap(model.savedRoutes.first), walked: false)
+        XCTAssertEqual(model.passport.walks, 0)
     }
 
     func testSearchPinBecomesWaypoint() async throws {

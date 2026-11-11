@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Asks for the route's name on a signpost plate laid over the map.
+/// Asks for the walk's name on a signpost plate laid over the map.
 struct SavePrompt: View {
     @Binding var name: String
     var onCancel: () -> Void
@@ -18,17 +18,17 @@ struct SavePrompt: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 14) {
-                Text("ROUTE OPSLAAN")
-                    .font(.sign(28, relativeTo: .title2))
+                Text("Hoe heet je wandeling?")
+                    .font(.sign(24, relativeTo: .title2))
                     .accessibilityAddTraits(.isHeader)
 
-                TextField("Naam van je wandeling", text: $name)
-                    .font(.text(18))
+                TextField("Naam", text: $name)
+                    .font(.text(19))
                     .focused($nameIsFocused)
                     .submitLabel(.done)
                     .onSubmit(onSave)
-                    .padding(.horizontal, 12)
-                    .frame(minHeight: 46)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: Brand.tapTarget)
                     .background(Color.white, in: RoundedRectangle(cornerRadius: Brand.corner))
                     .overlay {
                         RoundedRectangle(cornerRadius: Brand.corner)
@@ -39,29 +39,16 @@ struct SavePrompt: View {
                 HStack(spacing: 10) {
                     Button("Annuleer", action: onCancel)
                         .buttonStyle(OutlineButtonStyle(onYellow: true))
-                    Button("Opslaan", action: onSave)
+                    Button("Bewaar", action: onSave)
                         .buttonStyle(InkButtonStyle())
                         .accessibilityIdentifier("confirmSaveButton")
                 }
             }
-            .foregroundStyle(Brand.ink)
             .padding(.leading, 18)
             .padding(.trailing, 14 + point)
             .padding(.vertical, 18)
             .frame(maxWidth: 440, alignment: .leading)
-            .background {
-                SignpostShape(point: point).fill(Brand.yellow)
-            }
-            .overlay {
-                SignpostShape(point: point).stroke(Brand.ink, lineWidth: Brand.outline)
-            }
-            .overlay(alignment: .trailing) {
-                BlazeMark()
-                    .frame(width: 10, height: 26)
-                    .padding(.trailing, 6)
-            }
-            .environment(\.colorScheme, .light)
-            .tint(Brand.ink)
+            .plate(point: point)
             .padding(.horizontal, 18)
             .accessibilityElement(children: .contain)
             .accessibilityAddTraits(.isModal)

@@ -58,6 +58,8 @@ public struct HikeRoute: Codable, Identifiable, Hashable, Sendable {
     public var waypoints: [Waypoint]
     /// `legs[i]` connects `waypoints[i]` to `waypoints[i + 1]`.
     public var legs: [RouteLeg]
+    /// When the walk was done, or nil while it is still a plan.
+    public var walkedAt: Date?
 
     public init(
         id: UUID = UUID(),
@@ -65,7 +67,8 @@ public struct HikeRoute: Codable, Identifiable, Hashable, Sendable {
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         waypoints: [Waypoint],
-        legs: [RouteLeg]
+        legs: [RouteLeg],
+        walkedAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -73,6 +76,13 @@ public struct HikeRoute: Codable, Identifiable, Hashable, Sendable {
         self.updatedAt = updatedAt
         self.waypoints = waypoints
         self.legs = legs
+        self.walkedAt = walkedAt
+    }
+
+    /// True when the route ends where it started.
+    public var isLoop: Bool {
+        guard waypoints.count >= 3, let first = waypoints.first, let last = waypoints.last else { return false }
+        return first.coordinate == last.coordinate
     }
 
     public var points: [TrackPoint] {

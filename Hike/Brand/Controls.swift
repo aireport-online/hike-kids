@@ -1,26 +1,28 @@
 import SwiftUI
 
-/// The main action: charcoal with yellow signage lettering.
+/// The main action: charcoal with yellow lettering, big enough for small fingers.
 struct InkButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.sign(20, relativeTo: .headline))
-            .textCase(.uppercase)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
             .foregroundStyle(Brand.yellow.opacity(isEnabled ? 1 : 0.55))
             .padding(.horizontal, 18)
-            .frame(minHeight: 44)
+            .frame(minHeight: Brand.tapTarget)
             .background(
                 Brand.ink.opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.4),
                 in: RoundedRectangle(cornerRadius: Brand.corner)
             )
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .contentShape(Rectangle())
     }
 }
 
-/// A secondary action: an outlined plate. `onYellow` keeps the lettering ink-coloured when the
-/// button sits on a yellow panel, where it must not turn light in dark mode.
+/// A secondary action: a white or outlined button. `onYellow` keeps the lettering ink-coloured
+/// when the button sits on a yellow plate, where it must not turn light in dark mode.
 struct OutlineButtonStyle: ButtonStyle {
     var onYellow = false
     var compact = false
@@ -28,25 +30,28 @@ struct OutlineButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         let colour = onYellow ? Brand.ink : Brand.line
+        let fill = onYellow ? Color.white : Brand.paper
         configuration.label
-            .font(.sign(compact ? 15 : 18, relativeTo: .subheadline))
-            .textCase(.uppercase)
+            .font(.sign(compact ? 16 : 19, relativeTo: .subheadline))
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
             .foregroundStyle(colour.opacity(isEnabled ? 1 : 0.35))
-            .padding(.horizontal, compact ? 10 : 14)
-            .frame(minWidth: compact ? 36 : 44, minHeight: compact ? 32 : 44)
+            .padding(.horizontal, compact ? 12 : 16)
+            .frame(minWidth: compact ? 44 : Brand.tapTarget, minHeight: compact ? 44 : Brand.tapTarget)
             .background(
-                colour.opacity(configuration.isPressed ? 0.15 : 0),
+                fill.opacity(configuration.isPressed ? 0.7 : (isEnabled ? 1 : 0.5)),
                 in: RoundedRectangle(cornerRadius: Brand.corner)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: Brand.corner)
                     .strokeBorder(colour.opacity(isEnabled ? 1 : 0.35), lineWidth: Brand.outline)
             }
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .contentShape(Rectangle())
     }
 }
 
-/// A row of options of which one is switched on, lettered like a signpost.
+/// A row of options of which one is switched on.
 struct SignSwitch<Value: Hashable>: View {
     struct Option: Identifiable {
         let value: Value
@@ -56,25 +61,21 @@ struct SignSwitch<Value: Hashable>: View {
 
     let options: [Option]
     @Binding var selection: Value
-    var onYellow = false
 
     var body: some View {
-        let colour = onYellow ? Brand.ink : Brand.line
-        let contrast = onYellow ? Brand.yellow : Brand.paper
-
         HStack(spacing: 0) {
             ForEach(options) { option in
                 let isOn = option.value == selection
                 Button {
                     selection = option.value
                 } label: {
-                    Text(option.title.uppercased())
-                        .font(.sign(16, relativeTo: .subheadline))
+                    Text(option.title)
+                        .font(.sign(17, relativeTo: .subheadline))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                        .foregroundStyle(isOn ? contrast : colour)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(isOn ? colour : Color.clear)
+                        .foregroundStyle(isOn ? Brand.paper : Brand.line)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(isOn ? Brand.line : Color.clear)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -84,19 +85,20 @@ struct SignSwitch<Value: Hashable>: View {
         .clipShape(RoundedRectangle(cornerRadius: Brand.corner))
         .overlay {
             RoundedRectangle(cornerRadius: Brand.corner)
-                .strokeBorder(colour, lineWidth: Brand.outline)
+                .strokeBorder(Brand.line, lineWidth: Brand.outline)
         }
+        .accessibilityElement(children: .contain)
     }
 }
 
 extension View {
-    /// A sheet's title in signage capitals, in place of the system title.
+    /// A sheet's title in the app's own letter, in place of the system title.
     func signTitle(_ title: String) -> some View {
         navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text(title.uppercased())
+                    Text(title)
                         .font(.sign(22, relativeTo: .headline))
                         .foregroundStyle(Brand.line)
                         .accessibilityAddTraits(.isHeader)

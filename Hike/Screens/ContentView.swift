@@ -7,7 +7,8 @@ struct ContentView: View {
 
     @AppStorage("mapStyle") private var mapStyleRaw = MapStyle.topo.rawValue
     @AppStorage("showsTrails") private var showsTrails = true
-    @AppStorage("pace") private var paceRaw = Pace.normal.rawValue
+    /// Empty until the child has said how old they are.
+    @AppStorage("ageGroup") private var ageGroupRaw = ""
 
     @State private var permission = LocationPermission()
     @State private var activeSheet: ActiveSheet?
@@ -20,12 +21,12 @@ struct ContentView: View {
     @State private var bottomInset: CGFloat = 0
 
     private enum ActiveSheet: String, Identifiable {
-        case search, settings, routes
+        case search, routes, passport, parentGate, parents
         var id: String { rawValue }
     }
 
     private var mapStyle: MapStyle { MapStyle(rawValue: mapStyleRaw) ?? .topo }
-    private var pace: Pace { Pace(rawValue: paceRaw) ?? .normal }
+    private var profile: KidProfile { KidProfile(ageGroup: AgeGroup(rawValue: ageGroupRaw) ?? .middle) }
 
     var body: some View {
         ZStack {
@@ -36,6 +37,7 @@ struct ContentView: View {
                 segments: model.segments,
                 segmentsVersion: model.segmentsVersion,
                 waypoints: model.markers,
+                discoveries: model.discoveries,
                 scrubCoordinate: model.scrubCoordinate,
                 searchPin: model.searchPin,
                 camera: model.camera,
@@ -54,7 +56,7 @@ struct ContentView: View {
                 Spacer(minLength: 0)
                 VStack(spacing: 0) {
                     attribution
-                    RoutePanel(pace: pace, onShowRoutes: { activeSheet = .routes }, onSave: { promptForSave() })
+                    RoutePanel(profile: profile, onSave: { promptForSave() })
                 }
                 .background { heightReader { bottomInset = $0 } }
             }
@@ -79,22 +81,25 @@ struct ContentView: View {
                 SearchView(near: model.searchBias ?? model.waypoints.last?.coordinate) { place in
                     model.show(place)
                 }
-            case .settings:
-                MapSettingsView(mapStyleRaw: $mapStyleRaw, showsTrails: $showsTrails, paceRaw: $paceRaw)
-                    .presentationDetents([.medium, .large])
             case .routes:
-                SavedRoutesView(pace: pace)
+                SavedRoutesView(profile: profile, onShowPassport: { activeSheet = .passport })
+            case .passport:
+                PassportView()
+            case .parentGate:
+                ParentGateView(onPassed: { activeSheet = .parents })
+            case .parents:
+                ParentsView(mapStyleRaw: $mapStyleRaw, showsTrails: $showsTrails, ageGroupRaw: $ageGroupRaw)
+            }
+        }
+        .fullScreenCover(isPresented: Binding(get: { ageGroupRaw.isEmpty }, set: { _ in })) {
+            AgeView { group in
+                ageGroupRaw = group.rawValue
             }
         }
         .alert("Locatie staat uit", isPresented: $showsLocationDenied) {
-            Button("Open Instellingen") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-            Button("Annuleer", role: .cancel) {}
+            Button("OK", role: .cancel) {}
         } message: {
-            Text("Geef Hike toegang tot je locatie in Instellingen om je positie op de kaart te zien.")
+            Text("Vraag een ouder om Hike Kids je locatie te laten zien. Dat kan in Instellingen.")
         }
         .alert(
             "Er ging iets mis",
@@ -124,37 +129,40 @@ struct ContentView: View {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(Brand.line)
-                    Text("Zoek een plaats, top of hut")
-                        .font(.text(17))
-                        .foregroundStyle(Brand.line.opacity(0.6))
+                    Text("Zoek een plek")
+                        .font(.text(19))
+                        .foregroundStyle(Brand.line.opacity(0.65))
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 12)
-                .frame(minHeight: 46)
-                .background(Brand.paper, in: RoundedRectangle(cornerRadius: Brand.corner))
+                .padding(.horizontal, 16)
+                .frame(minHeight: Brand.tapTarget)
+                .background(Brand.paper, in: Capsule())
                 .overlay {
-                    RoundedRectangle(cornerRadius: Brand.corner)
-                        .strokeBorder(Brand.line, lineWidth: Brand.outline)
+                    Capsule().strokeBorder(Brand.line, lineWidth: Brand.outline)
                 }
-                .contentShape(Rectangle())
+                .contentShape(Capsule())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("searchButton")
 
-            VStack(spacing: 6) {
-                mapButton("square.3.layers.3d", label: "Kaartlagen") {
-                    activeSheet = .settings
-                }
-                .accessibilityIdentifier("layersButton")
-                mapButton("location", label: "Mijn locatie") {
+            VStack(spacing: 8) {
+                mapButton("location.fill", label: "Waar ben ik?") {
                     showUserLocation()
                 }
-                mapButton("signpost.right", label: "Mijn routes") {
+                mapButton("signpost.right.fill", label: "Mijn wandelingen") {
                     activeSheet = .routes
                 }
                 .accessibilityIdentifier("routesButton")
+                mapButton("rosette", label: "Wandelpaspoort") {
+                    activeSheet = .passport
+                }
+                .accessibilityIdentifier("passportButton")
+                mapButton("figure.and.child.holdinghands", label: "Voor ouders") {
+                    activeSheet = .parentGate
+                }
+                .accessibilityIdentifier("parentsButton")
             }
         }
         .padding(.horizontal, 12)
@@ -165,15 +173,14 @@ struct ContentView: View {
     private func mapButton(_ systemImage: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 19, weight: .semibold))
                 .foregroundStyle(Brand.line)
-                .frame(width: 44, height: 44)
-                .background(Brand.paper, in: RoundedRectangle(cornerRadius: Brand.corner))
+                .frame(width: Brand.tapTarget, height: Brand.tapTarget)
+                .background(Brand.paper, in: Circle())
                 .overlay {
-                    RoundedRectangle(cornerRadius: Brand.corner)
-                        .strokeBorder(Brand.line, lineWidth: Brand.outline)
+                    Circle().strokeBorder(Brand.line, lineWidth: Brand.outline)
                 }
-                .contentShape(Rectangle())
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
@@ -189,9 +196,9 @@ struct ContentView: View {
                     .foregroundStyle(Brand.line.opacity(0.75))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                    .padding(.horizontal, 5)
+                    .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Brand.paper.opacity(0.85), in: RoundedRectangle(cornerRadius: 2))
+                    .background(Brand.paper.opacity(0.85), in: Capsule())
             }
             .padding(.horizontal, 10)
             .padding(.bottom, 4)

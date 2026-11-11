@@ -53,6 +53,16 @@ final class LiveServiceTests: XCTestCase {
         }
     }
 
+    func testFindsFunPlacesAlongAWalk() async throws {
+        try requireLive()
+        // Around the Lac Blanc hut above Chamonix: a hut and summits within a few kilometres.
+        let hut = Coordinate(latitude: 45.9817, longitude: 6.8919)
+        let found = try await PhotonClient().discoveries(near: hut, radius: 3000, kinds: Discovery.Kind.allCases)
+        print("live discoveries: \(found.prefix(6).map { "\($0.kind.emoji) \($0.name)" })")
+        XCTAssertTrue(found.contains { $0.kind == .hut && $0.name.contains("Lac Blanc") })
+        XCTAssertTrue(found.contains { $0.kind == .peak })
+    }
+
     func testFindsAMountainHutByName() async throws {
         try requireLive()
         let places = try await PhotonClient().search("Refuge du Lac Blanc", near: Coordinate(latitude: 45.98, longitude: 6.89))

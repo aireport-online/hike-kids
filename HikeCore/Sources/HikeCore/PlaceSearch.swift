@@ -40,8 +40,13 @@ public struct PhotonClient: Sendable {
     public static let europe = "-25,34,45,72"
 
     private let baseURL: URL
-    private let http: HTTPClient
-    private let userAgent: String
+    let http: HTTPClient
+    let userAgent: String
+
+    /// The endpoint that lists places around a point; it sits next to the search endpoint.
+    var reverseURL: URL {
+        baseURL.deletingLastPathComponent().appendingPathComponent("reverse")
+    }
 
     public init(
         baseURL: URL = PhotonClient.publicServer,

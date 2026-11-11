@@ -28,13 +28,13 @@ struct ElevationChart: View {
         VStack(alignment: .leading, spacing: 2) {
             Group {
                 if let selectedSample {
-                    Text("\(HikeFormat.distance(selectedSample.distance)) · \(HikeFormat.elevation(selectedSample.elevation)) HOOGTE")
+                    Text("Na \(HikeFormat.distance(selectedSample.distance)) ben je op \(HikeFormat.elevation(selectedSample.elevation)) hoogte")
                 } else {
-                    Text("HOOGTEPROFIEL · \(HikeFormat.elevation(lowest)) – \(HikeFormat.elevation(highest))")
-                        .foregroundStyle(Brand.ink.opacity(0.7))
+                    Text("Zo gaat het op en neer")
+                        .foregroundStyle(Brand.ink.opacity(0.8))
                 }
             }
-            .font(.signLabel(13))
+            .font(.text(14, relativeTo: .caption))
             .monospacedDigit()
 
             Chart {
@@ -66,7 +66,7 @@ struct ElevationChart: View {
                     AxisValueLabel {
                         if let kilometres = value.as(Double.self) {
                             Text("\(kilometres.formatted(.number.precision(.fractionLength(0...1)))) km")
-                                .font(.signLabel(11))
+                                .font(.text(11, relativeTo: .caption2))
                                 .fixedSize()
                                 .foregroundStyle(Brand.ink.opacity(0.8))
                         }
@@ -81,7 +81,7 @@ struct ElevationChart: View {
                         if let metres = value.as(Double.self) {
                             // Formatted the same way as the figures above the chart.
                             Text(HikeFormat.elevation(metres))
-                                .font(.signLabel(11))
+                                .font(.text(11, relativeTo: .caption2))
                                 .foregroundStyle(Brand.ink.opacity(0.8))
                         }
                     }
