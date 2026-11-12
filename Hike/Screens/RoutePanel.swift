@@ -1,8 +1,8 @@
 import HikeCore
 import SwiftUI
 
-/// The signpost plate at the bottom of the map. It leads a child through planning a walk:
-/// pick a start, choose how far, see what the walk is like, keep it.
+/// The white card at the bottom of the map. It leads a child through planning a walk: pick a
+/// start, choose how far, see what the walk is like and how many stars it is worth, keep it.
 struct RoutePanel: View {
     @Environment(PlannerModel.self) private var model
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -12,8 +12,10 @@ struct RoutePanel: View {
 
     @State private var showsDiscardConfirmation = false
 
-    /// Depth of the plate's pointed end; content keeps clear of it.
-    private let point: CGFloat = 18
+    /// Which step of planning the panel shows; the card springs when it changes.
+    private var step: Int {
+        min(model.waypoints.count, 2)
+    }
 
     var body: some View {
         @Bindable var model = model
@@ -29,14 +31,16 @@ struct RoutePanel: View {
                 if let comparison = HeightComparison.text(forAscent: model.stats.ascent), model.isComplete {
                     Text("⛰️ \(comparison)")
                         .font(.text(15, relativeTo: .subheadline))
+                        .foregroundStyle(Brand.chrome)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if !model.discoveries.isEmpty {
                     discoveries
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
                 if verticalSizeClass != .compact, model.profile.count >= 2 {
                     ElevationChart(samples: model.profile, scrubDistance: $model.scrubDistance)
-                        .frame(height: 70)
+                        .frame(height: 64)
                 }
                 if let error = model.routingError {
                     failure(error)
@@ -47,14 +51,17 @@ struct RoutePanel: View {
                 actions
             }
         }
-        .padding(.leading, 16)
-        .padding(.trailing, 12 + point)
-        .padding(.vertical, 14)
+        .padding(16)
         .frame(maxWidth: 560, alignment: .leading)
-        .plate(point: point, shadow: true)
+        .card(cornerRadius: 26)
         .padding(.horizontal, 10)
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity)
+        .animation(Motion.arrive, value: step)
+        .animation(Motion.arrive, value: model.isComplete)
+        .animation(Motion.arrive, value: model.discoveries.count)
+        .sensoryFeedback(.impact(weight: .light), trigger: step)
+        .sensoryFeedback(.success, trigger: model.isComplete) { _, isComplete in isComplete }
         .confirmationDialog(
             "Deze wandeling is nog niet bewaard",
             isPresented: $showsDiscardConfirmation,
@@ -68,13 +75,15 @@ struct RoutePanel: View {
     // MARK: - Step 1: where do we start?
 
     private var welcome: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Mascot(pose: .wave, size: 76)
+        HStack(alignment: .center, spacing: 10) {
+            Mascot(pose: .wave, size: 78)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Waar beginnen we?")
                     .font(.sign(24, relativeTo: .title2))
+                    .foregroundStyle(Brand.line)
                 Text("Tik op de kaart waar je wilt starten.")
                     .font(.text(16, relativeTo: .subheadline))
+                    .foregroundStyle(Brand.chrome)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
@@ -82,19 +91,22 @@ struct RoutePanel: View {
                 undoButton
             }
         }
+        .transition(.opacity)
     }
 
     // MARK: - Step 2: how far?
 
     private var chooseDistance: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 12) {
-                Mascot(pose: .point, size: 64)
+            HStack(alignment: .center, spacing: 10) {
+                Mascot(pose: .point, size: 66)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Hoe ver wil je lopen?")
                         .font(.sign(22, relativeTo: .title2))
+                        .foregroundStyle(Brand.line)
                     Text("Ik maak een rondje voor je.")
                         .font(.text(16, relativeTo: .subheadline))
+                        .foregroundStyle(Brand.chrome)
                 }
                 Spacer(minLength: 0)
             }
@@ -107,9 +119,10 @@ struct RoutePanel: View {
                 undoButton
                 Text("Of tik zelf verder op de kaart.")
                     .font(.text(15, relativeTo: .footnote))
-                    .foregroundStyle(Brand.ink.opacity(0.8))
+                    .foregroundStyle(Brand.chrome)
             }
         }
+        .transition(.opacity)
     }
 
     private func loopButton(_ title: String, index: Int) -> some View {
@@ -117,16 +130,31 @@ struct RoutePanel: View {
         return Button {
             model.makeLoop(distance: distance)
         } label: {
-            VStack(spacing: 0) {
+            VStack(spacing: 2) {
+                // One, two or three little stars: how big an adventure this is.
+                HStack(spacing: 1) {
+                    ForEach(0...index, id: \.self) { _ in
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Brand.yellow)
+                    }
+                }
                 Text(title)
                     .font(.sign(19, relativeTo: .headline))
+                    .foregroundStyle(Brand.line)
                 Text(HikeFormat.distance(distance))
                     .font(.text(15, relativeTo: .subheadline))
+                    .foregroundStyle(Brand.chrome)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 78)
+            .card(cornerRadius: 18)
+            .glow(RoundedRectangle(cornerRadius: 18), isOn: index == 1)
+            .contentShape(RoundedRectangle(cornerRadius: 18))
         }
-        .buttonStyle(OutlineButtonStyle(onYellow: true))
+        .buttonStyle(BounceButtonStyle())
+        .popIn(delay: Double(index) * 0.07)
         .accessibilityIdentifier("loopButton-\(index)")
+        .accessibilityLabel("\(title), \(HikeFormat.distance(distance))")
     }
 
     // MARK: - Step 3: the walk
@@ -138,37 +166,41 @@ struct RoutePanel: View {
         return model.loopTarget != nil || model.isLoop ? "Jouw rondje" : "Jouw wandeling"
     }
 
+    private var assessment: KidAssessment {
+        KidAssessment(stats: model.stats, profile: profile)
+    }
+
     private var header: some View {
         HStack(alignment: .center, spacing: 8) {
-            Text(title)
-                .font(.sign(24, relativeTo: .title2))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            if model.isRouting {
-                ProgressView()
-                    .controlSize(.small)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.sign(23, relativeTo: .title2))
+                        .foregroundStyle(Brand.line)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    if model.isRouting {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                }
+                if model.isComplete {
+                    HStack(spacing: 8) {
+                        Stars(earned: assessment.stars, size: 20)
+                        effortBadge
+                    }
+                    .transition(.scale(scale: 0.7, anchor: .leading).combined(with: .opacity))
+                }
             }
             Spacer(minLength: 0)
-            if model.isComplete {
-                effortBadge
-            }
             Button {
                 startOver()
             } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .heavy))
-                    .frame(width: 36, height: 36)
-                    .background(Color.white, in: Circle())
-                    .overlay { Circle().strokeBorder(Brand.ink, lineWidth: 2) }
-                    .contentShape(Circle())
+                RoundButtonLabel(systemImage: "xmark", size: 40)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(BounceButtonStyle())
             .accessibilityLabel("Opnieuw beginnen")
         }
-    }
-
-    private var assessment: KidAssessment {
-        KidAssessment(stats: model.stats, profile: profile)
     }
 
     /// Tells at a glance whether the walk suits the child's age.
@@ -179,9 +211,9 @@ struct RoutePanel: View {
         switch effort {
         case .easy:
             background = Brand.grass
-            foreground = Brand.ink
+            foreground = .white
         case .sturdy:
-            background = .white
+            background = Brand.yellow
             foreground = Brand.ink
         case .tooFar:
             background = Brand.blaze
@@ -192,9 +224,8 @@ struct RoutePanel: View {
             .lineLimit(1)
             .foregroundStyle(foreground)
             .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .padding(.vertical, 4)
             .background(background, in: Capsule())
-            .overlay { Capsule().strokeBorder(Brand.ink, lineWidth: 2) }
             .accessibilityIdentifier("effortBadge")
     }
 
@@ -207,29 +238,37 @@ struct RoutePanel: View {
         default: breaks = "met \(assessment.breaks) pauzes"
         }
         return HStack(alignment: .top, spacing: 8) {
-            figure(HikeFormat.distance(model.stats.distance), caption: "ver", label: "Afstand")
-            figure(HikeFormat.duration(assessment.totalTime), caption: breaks, label: "Tijd")
-            figure(HikeFormat.count(assessment.steps), caption: "stappen", label: "Stappen")
+            figure(HikeFormat.distance(model.stats.distance), symbol: "mappin.and.ellipse", caption: "ver", label: "Afstand")
+            figure(HikeFormat.duration(assessment.totalTime), symbol: "clock", caption: breaks, label: "Tijd")
+            figure(HikeFormat.count(assessment.steps), symbol: "shoeprints.fill", caption: "stappen", label: "Stappen")
         }
         .opacity(model.isComplete ? 1 : 0.45)
     }
 
-    /// A figure set large with its unit small beside it, and a few words underneath.
-    private func figure(_ value: String, caption: String, label: String) -> some View {
+    /// A figure set large with its unit small beside it; the digits roll when it changes.
+    private func figure(_ value: String, symbol: String, caption: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 ForEach(Array(HikeFormat.tokens(value).enumerated()), id: \.offset) { _, token in
                     Text(token.text)
                         .font(token.isFigure ? .sign(28, relativeTo: .title) : .sign(15, relativeTo: .footnote))
+                        .foregroundStyle(Brand.line)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
+                        .contentTransition(.numericText())
                 }
             }
-            Text(caption)
-                .font(.text(14, relativeTo: .caption))
-                .foregroundStyle(Brand.ink.opacity(0.8))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            .animation(.snappy, value: value)
+            HStack(spacing: 4) {
+                Image(systemName: symbol)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Brand.glow)
+                Text(caption)
+                    .font(.text(14, relativeTo: .caption))
+                    .foregroundStyle(Brand.chrome)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
@@ -241,17 +280,19 @@ struct RoutePanel: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Onderweg kom je tegen")
                 .font(.text(14, relativeTo: .caption))
-                .foregroundStyle(Brand.ink.opacity(0.8))
+                .foregroundStyle(Brand.chrome)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(model.discoveries) { discovery in
+                    ForEach(Array(model.discoveries.enumerated()), id: \.element.id) { index, discovery in
                         Text("\(discovery.kind.emoji) \(discovery.name)")
                             .font(.text(15, relativeTo: .subheadline))
+                            .foregroundStyle(Brand.line)
                             .lineLimit(1)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(Color.white, in: Capsule())
-                            .overlay { Capsule().strokeBorder(Brand.ink, lineWidth: 1.5) }
+                            .background(Brand.glow.opacity(0.14), in: Capsule())
+                            .overlay { Capsule().strokeBorder(Brand.glow.opacity(0.6), lineWidth: 1.5) }
+                            .popIn(delay: Double(index) * 0.08)
                             .accessibilityLabel("\(discovery.kind.title): \(discovery.name)")
                     }
                 }
@@ -274,6 +315,7 @@ struct RoutePanel: View {
         return VStack(alignment: .leading, spacing: 8) {
             Text("Oeps! \(message)")
                 .font(.text(16, relativeTo: .subheadline))
+                .foregroundStyle(Brand.line)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 Button("Nog eens") { model.retryFailedLegs() }
@@ -285,14 +327,13 @@ struct RoutePanel: View {
                         .accessibilityIdentifier("straightLineFallbackButton")
                 }
             }
-            .buttonStyle(OutlineButtonStyle(onYellow: true, compact: true))
+            .buttonStyle(OutlineButtonStyle(compact: true))
         }
-        .padding(10)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: Brand.corner))
+        .background(Brand.blaze.opacity(0.08), in: RoundedRectangle(cornerRadius: 18))
         .overlay {
-            RoundedRectangle(cornerRadius: Brand.corner)
-                .strokeBorder(Brand.blaze, lineWidth: Brand.outline)
+            RoundedRectangle(cornerRadius: 18).strokeBorder(Brand.blaze.opacity(0.7), lineWidth: 2)
         }
     }
 
@@ -301,9 +342,10 @@ struct RoutePanel: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(waypointTitle(index: index))
                     .font(.sign(17, relativeTo: .subheadline))
+                    .foregroundStyle(Brand.line)
                 Text("Houd vast om te verschuiven")
                     .font(.text(14, relativeTo: .caption))
-                    .foregroundStyle(Brand.ink.opacity(0.8))
+                    .foregroundStyle(Brand.chrome)
             }
             Spacer(minLength: 0)
             Button {
@@ -313,7 +355,7 @@ struct RoutePanel: View {
             } label: {
                 Label("Weg", systemImage: "trash")
             }
-            .buttonStyle(OutlineButtonStyle(onYellow: true, compact: true))
+            .buttonStyle(OutlineButtonStyle(compact: true))
         }
     }
 
@@ -331,11 +373,11 @@ struct RoutePanel: View {
         Button {
             model.undo()
         } label: {
-            Image(systemName: "arrow.uturn.backward")
-                .font(.system(size: 18, weight: .bold))
+            RoundButtonLabel(systemImage: "arrow.uturn.backward", size: 48)
         }
-        .buttonStyle(OutlineButtonStyle(onYellow: true))
+        .buttonStyle(BounceButtonStyle())
         .disabled(!model.canUndo)
+        .opacity(model.canUndo ? 1 : 0.4)
         .accessibilityLabel("Stap terug")
     }
 
@@ -350,7 +392,7 @@ struct RoutePanel: View {
                     Label("Andere kant", systemImage: "arrow.triangle.2.circlepath")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(OutlineButtonStyle(onYellow: true))
+                .buttonStyle(OutlineButtonStyle())
                 .disabled(model.isRouting)
                 .accessibilityIdentifier("turnLoopButton")
             } else {

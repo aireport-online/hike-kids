@@ -118,6 +118,9 @@ public struct KidAssessment: Equatable, Sendable {
     /// The distance on the flat that would be as tiring: every 100 m of climb counts as 800 m.
     public var effortDistance: Double
     public var effort: Effort
+    /// One to three stars for a walk that suits the child: more for a bigger adventure.
+    /// A walk that is too far earns none, so that overdoing it is never the way to win.
+    public var stars: Int
 
     public init(stats: RouteStats, profile: KidProfile) {
         let walkingHours = stats.distance / profile.speed + stats.ascent / profile.climbRate
@@ -138,6 +141,12 @@ public struct KidAssessment: Equatable, Sendable {
             effort = .sturdy
         } else {
             effort = .tooFar
+        }
+
+        switch effort {
+        case .easy: stars = effortDistance <= profile.comfortableDistance / 2 ? 1 : 2
+        case .sturdy: stars = 3
+        case .tooFar: stars = 0
         }
     }
 }

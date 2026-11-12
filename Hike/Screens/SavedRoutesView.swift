@@ -1,102 +1,130 @@
 import HikeCore
 import SwiftUI
 
-/// The saved walks as plates on a signpost. A walk that was done gets a stamp.
+/// The channel with the saved walks, as plates on a signpost. Stamping a walk as done brings
+/// the reward.
 struct SavedRoutesView: View {
     @Environment(PlannerModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
 
     let profile: KidProfile
-    var onShowPassport: () -> Void
+    var onMenu: () -> Void
+    /// Called after a walk was opened on the map.
+    var onOpened: () -> Void
 
     @State private var routeAwaitingConfirmation: HikeRoute?
+    @State private var reward: Reward?
+
+    private struct Reward: Identifiable {
+        let id = UUID()
+        let routeName: String
+        let stars: Int
+        let before: Passport
+        let after: Passport
+    }
 
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(model.savedRoutes) { route in
-                    RoutePlate(
-                        route: route,
-                        profile: profile,
-                        isCurrent: route.id == model.currentRouteID,
-                        onOpen: { requestOpen(route) },
-                        onToggleWalked: { model.setWalked(route, walked: route.walkedAt == nil) }
-                    )
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 7, leading: 18, bottom: 7, trailing: 14))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            model.delete(route)
-                        } label: {
-                            Label("Weg", systemImage: "trash")
+        ZStack {
+            Pinstripes()
+
+            VStack(spacing: 0) {
+                ChannelHeader(title: "Mijn wandelingen", onMenu: onMenu)
+
+                if model.savedRoutes.isEmpty {
+                    emptyState
+                } else {
+                    List {
+                        ForEach(Array(model.savedRoutes.enumerated()), id: \.element.id) { index, route in
+                            RoutePlate(
+                                route: route,
+                                profile: profile,
+                                isCurrent: route.id == model.currentRouteID,
+                                onOpen: { requestOpen(route) },
+                                onToggleWalked: { toggleWalked(route) }
+                            )
+                            .popIn(delay: min(Double(index), 6) * 0.06)
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 7, leading: 18, bottom: 7, trailing: 14))
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    model.delete(route)
+                                } label: {
+                                    Label("Weg", systemImage: "trash")
+                                }
+                            }
                         }
                     }
-                }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background {
-                // The pole the plates hang on. It starts below the title bar.
-                ZStack {
-                    Brand.ground
-                        .ignoresSafeArea()
-                    if !model.savedRoutes.isEmpty {
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .background {
+                        // The pole the plates hang on.
                         Capsule()
-                            .fill(Brand.line)
+                            .fill(Brand.chrome.opacity(0.55))
                             .frame(width: 12)
                             .ignoresSafeArea(edges: .bottom)
                     }
                 }
             }
-            .overlay {
-                if model.savedRoutes.isEmpty {
-                    emptyState
-                }
-            }
-            .signTitle("Mijn wandelingen")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Klaar") { dismiss() }
-                        .font(.sign(17))
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: onShowPassport) {
-                        Label("Wandelpaspoort", systemImage: "rosette")
+
+            if let reward {
+                RewardView(
+                    routeName: reward.routeName,
+                    stars: reward.stars,
+                    before: reward.before,
+                    after: reward.after,
+                    onDone: {
+                        withAnimation(.easeIn(duration: 0.2)) { self.reward = nil }
                     }
-                }
-            }
-            .confirmationDialog(
-                "Je wandeling op de kaart is nog niet bewaard",
-                isPresented: Binding(
-                    get: { routeAwaitingConfirmation != nil },
-                    set: { if !$0 { routeAwaitingConfirmation = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button("Toch openen", role: .destructive) {
-                    if let route = routeAwaitingConfirmation {
-                        open(route)
-                    }
-                }
-                Button("Annuleer", role: .cancel) {}
+                )
+                .transition(.opacity)
+                .zIndex(1)
             }
         }
-        .tint(Brand.line)
+        .confirmationDialog(
+            "Je wandeling op de kaart is nog niet bewaard",
+            isPresented: Binding(
+                get: { routeAwaitingConfirmation != nil },
+                set: { if !$0 { routeAwaitingConfirmation = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Toch openen", role: .destructive) {
+                if let route = routeAwaitingConfirmation {
+                    open(route)
+                }
+            }
+            Button("Annuleer", role: .cancel) {}
+        }
     }
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Mascot(pose: .point, size: 120)
+            Spacer(minLength: 0)
+            Mascot(pose: .point, size: 150)
+                .popIn()
             Text("Nog geen wandelingen")
                 .font(.sign(24, relativeTo: .title2))
                 .foregroundStyle(Brand.line)
             Text("Maak een rondje op de kaart en bewaar het. Dan hangt het hier.")
                 .font(.text(17))
-                .foregroundStyle(Brand.line.opacity(0.75))
+                .foregroundStyle(Brand.chrome)
                 .multilineTextAlignment(.center)
+            Spacer(minLength: 0)
+            Spacer(minLength: 0)
         }
         .padding(32)
+    }
+
+    private func toggleWalked(_ route: HikeRoute) {
+        let before = model.passport
+        let nowWalked = route.walkedAt == nil
+        model.setWalked(route, walked: nowWalked)
+        guard nowWalked else { return }
+        // A stamp is worth celebrating; taking one away is not.
+        let stars = KidAssessment(stats: route.stats, profile: profile).stars
+        withAnimation(.easeOut(duration: 0.2)) {
+            reward = Reward(routeName: route.name, stars: stars, before: before, after: model.passport)
+        }
     }
 
     private func requestOpen(_ route: HikeRoute) {
@@ -109,7 +137,7 @@ struct SavedRoutesView: View {
 
     private func open(_ route: HikeRoute) {
         model.open(route)
-        dismiss()
+        onOpened()
     }
 }
 
@@ -149,15 +177,16 @@ private struct RoutePlate: View {
             Button(action: onToggleWalked) {
                 VStack(spacing: 0) {
                     Image(systemName: isWalked ? "checkmark.seal.fill" : "seal")
-                        .font(.system(size: 26, weight: .semibold))
+                        .font(.system(size: 28, weight: .semibold))
                         .foregroundStyle(isWalked ? Brand.grass : Brand.ink.opacity(0.55))
+                        .symbolEffect(.bounce, value: isWalked)
                     Text(isWalked ? "Gelopen!" : "Gelopen?")
                         .font(.sign(13, relativeTo: .caption))
                 }
                 .frame(width: 70, height: 56)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(BounceButtonStyle(pressedScale: 0.85))
             .accessibilityIdentifier("walkedButton")
             .accessibilityLabel(isWalked ? "Gelopen. Tik om het stempel weg te halen" : "Zet een stempel: gelopen")
         }
@@ -174,7 +203,7 @@ private struct RoutePlate: View {
         }
         .overlay {
             if isCurrent {
-                SignpostShape(point: point).stroke(Brand.ink, lineWidth: 5)
+                SignpostShape(point: point).stroke(Brand.glow, lineWidth: 4)
             }
         }
     }

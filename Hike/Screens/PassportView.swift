@@ -1,63 +1,90 @@
 import HikeCore
 import SwiftUI
 
-/// The walking passport: everything walked so far, and the badges it earned.
+/// The passport channel: the walker's level, everything walked so far, and the stamps.
 struct PassportView: View {
     @Environment(PlannerModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
+
+    var onMenu: () -> Void
+
+    @State private var shownProgress = 0.0
 
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
     var body: some View {
         let passport = model.passport
+        let level = passport.level
 
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    HStack(spacing: 14) {
-                        Mascot(pose: .cheer, size: 96)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(passport.walks == 0 ? "Nog leeg!" : "Goed gedaan!")
-                                .font(.sign(26, relativeTo: .title))
-                            Text(passport.walks == 0
-                                 ? "Loop een wandeling en zet er een stempel bij."
-                                 : "Je hebt \(passport.earnedCount) van de \(passport.badges.count) stempels.")
-                                .font(.text(17))
-                                .fixedSize(horizontal: false, vertical: true)
+        ZStack {
+            Pinstripes()
+
+            VStack(spacing: 0) {
+                ChannelHeader(title: "Paspoort", onMenu: onMenu)
+
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Level
+                        HStack(spacing: 12) {
+                            Mascot(pose: .cheer, size: 96)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Niveau \(level.number)")
+                                    .font(.sign(30, relativeTo: .largeTitle))
+                                    .foregroundStyle(Brand.line)
+                                    .accessibilityIdentifier("passportLevel")
+                                Text(level.title)
+                                    .font(.text(18))
+                                    .foregroundStyle(Brand.chrome)
+                                LevelBar(progress: shownProgress, height: 16)
+                                Text(passport.walks == 0
+                                     ? "Loop een wandeling en zet er een stempel bij."
+                                     : "Nog \(HikeFormat.distance(level.remaining)) tot niveau \(level.number + 1)")
+                                    .font(.text(14, relativeTo: .caption))
+                                    .foregroundStyle(Brand.chrome)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: 0)
                         }
-                        .foregroundStyle(Brand.line)
-                        Spacer(minLength: 0)
-                    }
+                        .padding(14)
+                        .card()
+                        .popIn()
 
-                    HStack(alignment: .top, spacing: 8) {
-                        total(String(passport.walks), caption: passport.walks == 1 ? "wandeling" : "wandelingen")
-                        total(HikeFormat.distance(passport.distance), caption: "gelopen")
-                        total(HikeFormat.elevation(passport.ascent), caption: "geklommen")
-                    }
-                    .padding(.leading, 16)
-                    .padding(.trailing, 30)
-                    .padding(.vertical, 14)
-                    .plate(point: 18)
-                    .accessibilityIdentifier("passportTotals")
+                        // Totals
+                        HStack(alignment: .top, spacing: 8) {
+                            total(String(passport.walks), caption: passport.walks == 1 ? "wandeling" : "wandelingen")
+                            total(HikeFormat.distance(passport.distance), caption: "gelopen")
+                            total(HikeFormat.elevation(passport.ascent), caption: "geklommen")
+                        }
+                        .padding(14)
+                        .card()
+                        .popIn(delay: 0.08)
+                        .accessibilityIdentifier("passportTotals")
 
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(passport.badges) { badge in
-                            BadgeCard(badge: badge)
+                        Text("Je hebt \(passport.earnedCount) van de \(passport.badges.count) stempels")
+                            .font(.sign(18, relativeTo: .headline))
+                            .foregroundStyle(Brand.line)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(Array(passport.badges.enumerated()), id: \.element.id) { index, badge in
+                                BadgeCard(badge: badge)
+                                    .popIn(delay: 0.12 + Double(index) * 0.05)
+                            }
                         }
                     }
-                }
-                .padding(20)
-            }
-            .background(Brand.ground.ignoresSafeArea())
-            .signTitle("Wandelpaspoort")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Klaar") { dismiss() }
-                        .font(.sign(17))
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 20)
+                    .frame(maxWidth: 560)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
-        .tint(Brand.line)
+        .onAppear {
+            // The bar fills up as the channel opens.
+            shownProgress = 0
+            withAnimation(Motion.arrive.delay(0.35)) {
+                shownProgress = level.progress
+            }
+        }
     }
 
     private func total(_ value: String, caption: String) -> some View {
@@ -66,12 +93,14 @@ struct PassportView: View {
                 ForEach(Array(HikeFormat.tokens(value).enumerated()), id: \.offset) { _, token in
                     Text(token.text)
                         .font(token.isFigure ? .sign(28, relativeTo: .title) : .sign(15, relativeTo: .footnote))
+                        .foregroundStyle(Brand.line)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                 }
             }
             Text(caption)
                 .font(.text(14, relativeTo: .caption))
+                .foregroundStyle(Brand.chrome)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -83,7 +112,7 @@ struct PassportView: View {
 
 /// One stamp: in colour once earned, grey with its goal while it is still to be earned.
 private struct BadgeCard: View {
-    let badge: Badge
+    let badge: HikeCore.Badge
 
     var body: some View {
         VStack(spacing: 6) {
@@ -92,30 +121,28 @@ private struct BadgeCard: View {
                 .grayscale(badge.isEarned ? 0 : 1)
                 .opacity(badge.isEarned ? 1 : 0.35)
                 .frame(width: 78, height: 78)
-                .background(badge.isEarned ? Brand.yellow : Brand.line.opacity(0.08), in: Circle())
+                .background(badge.isEarned ? Brand.yellow : Brand.chrome.opacity(0.1), in: Circle())
                 .overlay {
                     Circle().strokeBorder(
-                        Brand.line.opacity(badge.isEarned ? 1 : 0.3),
-                        style: StrokeStyle(lineWidth: Brand.outline, dash: badge.isEarned ? [] : [5, 5])
+                        badge.isEarned ? Brand.ink.opacity(0.8) : Brand.chrome.opacity(0.4),
+                        style: StrokeStyle(lineWidth: 2, dash: badge.isEarned ? [] : [5, 5])
                     )
                 }
+                .floating(amplitude: badge.isEarned ? 2.5 : 0, period: 3.2, phase: Double(badge.id.count) * 0.13)
             Text(badge.title)
                 .font(.sign(17, relativeTo: .headline))
                 .foregroundStyle(Brand.line.opacity(badge.isEarned ? 1 : 0.6))
                 .multilineTextAlignment(.center)
             Text(badge.isEarned ? "Gehaald!" : badge.goal)
                 .font(.text(14, relativeTo: .caption))
-                .foregroundStyle(Brand.line.opacity(0.7))
+                .foregroundStyle(Brand.chrome)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
         .padding(12)
-        .background(Brand.paper, in: RoundedRectangle(cornerRadius: Brand.corner))
-        .overlay {
-            RoundedRectangle(cornerRadius: Brand.corner)
-                .strokeBorder(Brand.line.opacity(badge.isEarned ? 1 : 0.25), lineWidth: 2)
-        }
+        .card()
+        .glow(RoundedRectangle(cornerRadius: Brand.tileCorner), isOn: badge.isEarned)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(badge.isEarned ? "\(badge.title), gehaald" : "\(badge.title), nog niet gehaald: \(badge.goal)")
     }

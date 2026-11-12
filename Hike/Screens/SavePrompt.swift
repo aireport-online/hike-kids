@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Asks for the walk's name on a signpost plate laid over the map.
+/// Asks for the walk's name on a card that pops up over the map.
 struct SavePrompt: View {
     @Binding var name: String
     var onCancel: () -> Void
@@ -8,48 +8,49 @@ struct SavePrompt: View {
 
     @FocusState private var nameIsFocused: Bool
 
-    private let point: CGFloat = 20
-
     var body: some View {
         ZStack {
-            Color.black.opacity(0.5)
+            Color.black.opacity(0.35)
                 .ignoresSafeArea()
                 .onTapGesture(perform: onCancel)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 14) {
-                Text("Hoe heet je wandeling?")
-                    .font(.sign(24, relativeTo: .title2))
-                    .accessibilityAddTraits(.isHeader)
+                HStack(spacing: 10) {
+                    Mascot(pose: .point, size: 60, floats: false)
+                    Text("Hoe heet je wandeling?")
+                        .font(.sign(23, relativeTo: .title2))
+                        .foregroundStyle(Brand.line)
+                        .accessibilityAddTraits(.isHeader)
+                }
 
                 TextField("Naam", text: $name)
                     .font(.text(19))
+                    .foregroundStyle(Brand.line)
                     .focused($nameIsFocused)
                     .submitLabel(.done)
                     .onSubmit(onSave)
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, 18)
                     .frame(minHeight: Brand.tapTarget)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: Brand.corner))
+                    .background(Brand.haze, in: Capsule())
                     .overlay {
-                        RoundedRectangle(cornerRadius: Brand.corner)
-                            .strokeBorder(Brand.ink, lineWidth: Brand.outline)
+                        Capsule().strokeBorder(Brand.glow, lineWidth: 2.5)
                     }
                     .accessibilityIdentifier("saveNameField")
 
                 HStack(spacing: 10) {
                     Button("Annuleer", action: onCancel)
-                        .buttonStyle(OutlineButtonStyle(onYellow: true))
+                        .buttonStyle(OutlineButtonStyle())
                     Button("Bewaar", action: onSave)
                         .buttonStyle(InkButtonStyle())
                         .accessibilityIdentifier("confirmSaveButton")
                 }
             }
-            .padding(.leading, 18)
-            .padding(.trailing, 14 + point)
-            .padding(.vertical, 18)
+            .padding(20)
             .frame(maxWidth: 440, alignment: .leading)
-            .plate(point: point)
+            .card(cornerRadius: 28)
             .padding(.horizontal, 18)
+            .popIn()
             .accessibilityElement(children: .contain)
             .accessibilityAddTraits(.isModal)
         }

@@ -2,11 +2,11 @@ import HikeCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Keeps children out of the grown-ups' settings: a sum that a young child cannot do yet.
+/// The gate in front of the parents' channel: a sum that a young child cannot do yet.
 struct ParentGateView: View {
+    var onMenu: () -> Void
     var onPassed: () -> Void
 
-    @Environment(\.dismiss) private var dismiss
     @State private var left = Int.random(in: 6...9)
     @State private var right = Int.random(in: 6...9)
     @State private var answer = ""
@@ -14,49 +14,57 @@ struct ParentGateView: View {
     @FocusState private var answerIsFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SignHeading(title: "Voor ouders")
-            Text("Dit deel is voor een volwassene. Los de som op om verder te gaan.")
-                .font(.text(17))
-                .foregroundStyle(Brand.line.opacity(0.8))
-                .fixedSize(horizontal: false, vertical: true)
+        ZStack {
+            Pinstripes()
 
-            HStack(spacing: 12) {
-                Text("\(left) × \(right) =")
-                    .font(.sign(30, relativeTo: .title))
-                    .foregroundStyle(Brand.line)
-                    .accessibilityIdentifier("gateQuestion")
-                TextField("?", text: $answer)
-                    .font(.sign(28, relativeTo: .title))
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.center)
-                    .focused($answerIsFocused)
-                    .frame(width: 96, height: Brand.tapTarget)
-                    .background(Brand.paper, in: RoundedRectangle(cornerRadius: Brand.corner))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: Brand.corner)
-                            .strokeBorder(wasWrong ? Brand.blaze : Brand.line, lineWidth: Brand.outline)
+            VStack(alignment: .leading, spacing: 0) {
+                ChannelHeader(title: "Voor ouders", onMenu: onMenu)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Dit deel is voor een volwassene. Los de som op om verder te gaan.")
+                        .font(.text(17))
+                        .foregroundStyle(Brand.chrome)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 12) {
+                        Text("\(left) × \(right) =")
+                            .font(.sign(30, relativeTo: .title))
+                            .foregroundStyle(Brand.line)
+                            .accessibilityIdentifier("gateQuestion")
+                        TextField("?", text: $answer)
+                            .font(.sign(28, relativeTo: .title))
+                            .foregroundStyle(Brand.line)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.center)
+                            .focused($answerIsFocused)
+                            .frame(width: 104, height: Brand.tapTarget)
+                            .background(Brand.haze, in: Capsule())
+                            .overlay {
+                                Capsule().strokeBorder(wasWrong ? Brand.blaze : Brand.glow, lineWidth: 2.5)
+                            }
+                            .accessibilityIdentifier("gateAnswer")
                     }
-                    .accessibilityIdentifier("gateAnswer")
-            }
 
-            if wasWrong {
-                Text("Dat klopt niet. Probeer deze som.")
-                    .font(.text(15, relativeTo: .footnote))
-                    .foregroundStyle(Brand.blaze)
-            }
+                    if wasWrong {
+                        Text("Dat klopt niet. Probeer deze som.")
+                            .font(.text(15, relativeTo: .footnote))
+                            .foregroundStyle(Brand.blaze)
+                    }
 
-            HStack(spacing: 10) {
-                Button("Terug") { dismiss() }
-                    .buttonStyle(OutlineButtonStyle())
-                Button("Verder") { check() }
-                    .buttonStyle(InkButtonStyle())
-                    .accessibilityIdentifier("gateContinue")
+                    Button("Verder") { check() }
+                        .buttonStyle(InkButtonStyle())
+                        .accessibilityIdentifier("gateContinue")
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .card(cornerRadius: 28)
+                .padding(.horizontal, 16)
+                .popIn(delay: 0.1)
+
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: 560)
         }
-        .padding(24)
-        .background(Brand.ground.ignoresSafeArea())
         .onAppear { answerIsFocused = true }
     }
 
@@ -77,11 +85,14 @@ struct ParentGateView: View {
 /// app works out what it tells the child.
 struct ParentsView: View {
     @Environment(PlannerModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
 
-    @Binding var mapStyleRaw: String
-    @Binding var showsTrails: Bool
     @Binding var ageGroupRaw: String
+    var onMenu: () -> Void
+    /// Called after a GPX file was imported and opened on the map.
+    var onImported: () -> Void
+
+    @AppStorage("mapStyle") private var mapStyleRaw = MapStyle.simple.rawValue
+    @AppStorage("showsTrails") private var showsTrails = false
 
     @State private var isImporting = false
     @State private var shareItem: ShareItem?
@@ -95,8 +106,13 @@ struct ParentsView: View {
     var body: some View {
         @Bindable var model = model
 
-        NavigationStack {
-            ScrollView {
+        ZStack {
+            Pinstripes()
+
+            VStack(spacing: 0) {
+                ChannelHeader(title: "Voor ouders", onMenu: onMenu)
+
+                ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
                     section("Leeftijd") {
                         SignSwitch(
@@ -124,7 +140,7 @@ struct ParentsView: View {
                                 .font(.text(17))
                                 .foregroundStyle(Brand.line)
                         }
-                        .tint(Brand.grass)
+                        .tint(Brand.glow)
                     }
 
                     section("De wandeling op de kaart") {
@@ -181,25 +197,22 @@ struct ParentsView: View {
                     }
                 }
                 .padding(20)
-            }
-            .background(Brand.paper.ignoresSafeArea())
-            .signTitle("Voor ouders")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Klaar") { dismiss() }
-                        .font(.sign(17))
+                .card(cornerRadius: 28)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 20)
+                .frame(maxWidth: 560)
+                .frame(maxWidth: .infinity)
                 }
-            }
-            .fileImporter(isPresented: $isImporting, allowedContentTypes: Self.gpxTypes) { result in
-                if case .success(let url) = result, model.importGPX(from: url) {
-                    dismiss()
-                }
-            }
-            .sheet(item: $shareItem) { item in
-                ActivityView(url: item.url)
             }
         }
-        .tint(Brand.line)
+        .fileImporter(isPresented: $isImporting, allowedContentTypes: Self.gpxTypes) { result in
+            if case .success(let url) = result, model.importGPX(from: url) {
+                onImported()
+            }
+        }
+        .sheet(item: $shareItem) { item in
+            ActivityView(url: item.url)
+        }
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -216,10 +229,9 @@ struct ParentsView: View {
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// The chosen map is a yellow card with the blaze; the others are plain outlined cards.
+    /// The chosen map glows cyan; the others are plain outlined cards.
     private func styleRow(_ style: MapStyle) -> some View {
         let isOn = style.rawValue == mapStyleRaw
-        let colour = isOn ? Brand.ink : Brand.line
 
         return Button {
             mapStyleRaw = style.rawValue
@@ -228,28 +240,29 @@ struct ParentsView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(style.title)
                         .font(.sign(19, relativeTo: .headline))
+                        .foregroundStyle(Brand.line)
                     Text(style.subtitle)
                         .font(.text(15, relativeTo: .caption))
-                        .opacity(0.8)
+                        .foregroundStyle(Brand.chrome)
                 }
                 Spacer(minLength: 0)
                 if isOn {
-                    BlazeMark()
-                        .frame(width: 26, height: 20)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(Brand.glow)
                 }
             }
-            .foregroundStyle(colour)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isOn ? Brand.yellow : Color.clear, in: RoundedRectangle(cornerRadius: Brand.corner))
+            .background(isOn ? Brand.glow.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 18))
             .overlay {
-                RoundedRectangle(cornerRadius: Brand.corner)
-                    .strokeBorder(colour, lineWidth: Brand.outline)
+                RoundedRectangle(cornerRadius: 18)
+                    .strokeBorder(isOn ? Brand.glow : Brand.edge, lineWidth: isOn ? 2.5 : 1.5)
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(BounceButtonStyle(pressedScale: 0.97))
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }

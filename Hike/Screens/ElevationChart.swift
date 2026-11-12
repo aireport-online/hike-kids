@@ -2,7 +2,7 @@ import Charts
 import HikeCore
 import SwiftUI
 
-/// Height along the route, drawn as a solid silhouette on the signpost plate. Dragging over it
+/// Height along the route, drawn as a soft cyan silhouette on the card. Dragging over it
 /// reports the distance under the finger, which the map uses to show where on the route that is.
 struct ElevationChart: View {
     let samples: [RouteGeometry.Sample]
@@ -31,7 +31,7 @@ struct ElevationChart: View {
                     Text("Na \(HikeFormat.distance(selectedSample.distance)) ben je op \(HikeFormat.elevation(selectedSample.elevation)) hoogte")
                 } else {
                     Text("Zo gaat het op en neer")
-                        .foregroundStyle(Brand.ink.opacity(0.8))
+                        .foregroundStyle(Brand.chrome)
                 }
             }
             .font(.text(14, relativeTo: .caption))
@@ -44,7 +44,13 @@ struct ElevationChart: View {
                         yStart: .value("Basis", lower),
                         yEnd: .value("Hoogte", sample.elevation)
                     )
-                    .foregroundStyle(Brand.ink)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Brand.glow.opacity(0.85), Brand.glow.opacity(0.35)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
                 }
 
                 if let selectedSample {
@@ -68,7 +74,7 @@ struct ElevationChart: View {
                             Text("\(kilometres.formatted(.number.precision(.fractionLength(0...1)))) km")
                                 .font(.text(11, relativeTo: .caption2))
                                 .fixedSize()
-                                .foregroundStyle(Brand.ink.opacity(0.8))
+                                .foregroundStyle(Brand.chrome)
                         }
                     }
                 }
@@ -76,13 +82,13 @@ struct ElevationChart: View {
             .chartYAxis {
                 AxisMarks(values: .automatic(desiredCount: 3)) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.75, dash: [3, 3]))
-                        .foregroundStyle(Brand.ink.opacity(0.35))
+                        .foregroundStyle(Brand.chrome.opacity(0.35))
                     AxisValueLabel {
                         if let metres = value.as(Double.self) {
                             // Formatted the same way as the figures above the chart.
                             Text(HikeFormat.elevation(metres))
                                 .font(.text(11, relativeTo: .caption2))
-                                .foregroundStyle(Brand.ink.opacity(0.8))
+                                .foregroundStyle(Brand.chrome)
                         }
                     }
                 }

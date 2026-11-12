@@ -60,6 +60,14 @@ final class KidProfileTests: XCTestCase {
         }
     }
 
+    func testStarsRewardAFittingAdventureButNeverOverdoingIt() {
+        let profile = KidProfile(ageGroup: .middle)   // comfortable 6 km, maximum 9 km
+        XCTAssertEqual(KidAssessment(stats: stats(distance: 2000), profile: profile).stars, 1)
+        XCTAssertEqual(KidAssessment(stats: stats(distance: 5000), profile: profile).stars, 2)
+        XCTAssertEqual(KidAssessment(stats: stats(distance: 8000), profile: profile).stars, 3)
+        XCTAssertEqual(KidAssessment(stats: stats(distance: 12_000), profile: profile).stars, 0)
+    }
+
     func testHeightComparisons() {
         XCTAssertNil(HeightComparison.text(forAscent: 4))
         XCTAssertEqual(HeightComparison.text(forAscent: 30), "Je klimt zo hoog als 6 giraffen op elkaar")
@@ -298,6 +306,46 @@ final class PassportTests: XCTestCase {
         XCTAssertEqual(passport.distance, 15_000, accuracy: 30)
         XCTAssertEqual(passport.ascent, 520)
         XCTAssertEqual(earned(passport), ["first", "three-loops", "five-walks", "five-km", "ten-km", "climber"])
+    }
+
+    func testNewBadgesAreThoseEarnedSinceBefore() {
+        let before = Passport(routes: [])
+        let after = Passport(routes: [route(kilometres: 6)])
+        XCTAssertEqual(after.newBadges(since: before).map(\.id), ["first", "five-km"])
+        XCTAssertTrue(after.newBadges(since: after).isEmpty)
+        XCTAssertTrue(before.newBadges(since: after).isEmpty)
+    }
+
+    func testLevelsRiseWithEffortAndShowProgress() {
+        XCTAssertEqual(WalkerLevel.threshold(forLevel: 1), 0)
+        XCTAssertEqual(WalkerLevel.threshold(forLevel: 2), 2000)
+        XCTAssertEqual(WalkerLevel.threshold(forLevel: 3), 5000)
+        XCTAssertEqual(WalkerLevel.threshold(forLevel: 4), 9000)
+
+        let start = WalkerLevel(effort: 0)
+        XCTAssertEqual(start.number, 1)
+        XCTAssertEqual(start.title, "Beginner")
+        XCTAssertEqual(start.progress, 0)
+        XCTAssertEqual(start.remaining, 2000)
+
+        let halfway = WalkerLevel(effort: 3500)
+        XCTAssertEqual(halfway.number, 2)
+        XCTAssertEqual(halfway.progress, 0.5, accuracy: 1e-9)
+        XCTAssertEqual(halfway.remaining, 1500)
+
+        XCTAssertEqual(WalkerLevel(effort: 5000).number, 3)
+        // Far beyond the named levels the title stays the highest one.
+        let champion = WalkerLevel(effort: 1_000_000)
+        XCTAssertGreaterThan(champion.number, 10)
+        XCTAssertEqual(champion.title, "Wandelkampioen")
+        XCTAssertLessThanOrEqual(champion.progress, 1)
+    }
+
+    func testPassportLevelCountsClimbingAsEffort() {
+        // 3 km with 250 m of climb is as much effort as 5 km on the flat: level 3.
+        XCTAssertEqual(Passport(routes: [route(kilometres: 3, ascent: 250)]).level.number, 3)
+        XCTAssertEqual(Passport(routes: [route(kilometres: 3)]).level.number, 2)
+        XCTAssertEqual(Passport(routes: [route(kilometres: 3, walked: false)]).level.number, 1)
     }
 
     func testWalkedDateSurvivesSavingAndOldFilesStillLoad() throws {

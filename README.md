@@ -6,37 +6,34 @@ over wandelpaden dat bij je leeftijd past.
 
 Hike Kids is een afsplitsing van [Hike](https://github.com/aireport-online/hike), de planner
 voor volwassenen. De kaart, de routeberekening en de opslag zijn dezelfde; alles eromheen is
-voor kinderen gemaakt. Zie [docs/HUISSTIJL.md](docs/HUISSTIJL.md) voor het ontwerp.
+voor kinderen gemaakt. Versie 2 heeft een spelachtige interface in de huisstijl **Kanalen**,
+met animaties, sterren en niveaus. Zie [docs/HUISSTIJL.md](docs/HUISSTIJL.md).
 
-| Hoe oud ben jij? | Hoe ver? | Jouw rondje |
-| --- | --- | --- |
-| ![Leeftijd kiezen](docs/schermen/1-hoe-oud.jpg) | ![Afstand kiezen](docs/schermen/4-hoe-ver.jpg) | ![Een rondje](docs/schermen/5-rondje.jpg) |
-
-| Mijn wandelingen | Wandelpaspoort | Voor ouders |
-| --- | --- | --- |
-| ![Mijn wandelingen](docs/schermen/8-mijn-wandelingen.jpg) | ![Wandelpaspoort](docs/schermen/9-wandelpaspoort.jpg) | ![Voor ouders](docs/schermen/11-voor-ouders.jpg) |
-
-Hoe je de app gebruikt, in een minuut: [docs/hike-kids-gebruik.mp4](docs/hike-kids-gebruik.mp4).
+![De huisstijl Kanalen](docs/kanalen/huisstijl.jpg)
 
 ## Wat een kind ermee doet
 
+De app opent als het hoofdmenu van een spelcomputer: vier grote tegels, Mo die zwaait, je
+niveau en onderaan een klok. Alles veert en gloeit zacht.
+
 1. **Hoe oud ben jij?** – 4–5, 6–8 of 9–12 jaar. Daar hangt van af hoe ver en hoe snel.
-2. **Waar beginnen we?** – tik op de kaart, zoek een plek, of kies "Waar ben ik?".
+2. **Nieuwe wandeling** – de kaart groeit uit de tegel. Tik waar je wilt beginnen, of zoek een plek.
 3. **Hoe ver wil je lopen?** – kort, middel of lang. Mo maakt een rondje dat terugkomt bij het
-   begin. Niet mooi? "Andere kant" legt hetzelfde rondje een andere kant op. Zelf punten
-   tikken en verschuiven kan ook.
-4. **Bekijk je wandeling** – hoe ver, hoe lang met pauzes, hoeveel stappen, en of het een
-   lekker rondje is of een stevige tocht. Klimmen wordt uitgelegd in giraffen, Domtorens en
-   Eiffeltorens.
-5. **Onderweg kom je tegen** – speeltuinen, uitkijkpunten, picknickplekken, dieren, een ijsje,
-   een kasteel, een waterval, een bergtop: als plaatjes op de kaart en in een rijtje.
-6. **Bewaar** de wandeling; ze hangt daarna als bord aan de wegwijzer.
-7. **Gelopen!** – zet een stempel bij een wandeling die je gedaan hebt. Het **wandelpaspoort**
-   telt je kilometers en hoogtemeters en geeft acht stempels om te verdienen.
+   begin. "Andere kant" legt hetzelfde rondje een andere kant op. Zelf punten tikken en
+   verschuiven kan ook.
+4. **Bekijk je wandeling** – hoe ver, hoe lang met pauzes, hoeveel stappen, en hoeveel sterren
+   ze waard is. Klimmen wordt uitgelegd in giraffen, Domtorens en Eiffeltorens.
+5. **Onderweg kom je tegen** – speeltuinen, uitkijkpunten, dieren, een ijsje, een kasteel, een
+   bergtop: als plaatjes op de kaart en in een rijtje.
+6. **Bewaar** de wandeling; ze hangt daarna als bord aan de wegwijzer bij **Mijn wandelingen**.
+7. **Gelopen!** – zet een stempel bij een wandeling die je gedaan hebt: confetti, sterren, en
+   je niveaubalk loopt vol.
+8. **Paspoort** – je niveau (van Beginner tot Wandelkampioen), je kilometers en acht stempels
+   om te verdienen.
 
 ## Voor ouders
 
-Achter een som (bijvoorbeeld 7 × 8) zit het oudergedeelte:
+Achter de tegel "Voor ouders" en een som (bijvoorbeeld 7 × 8) zit het oudergedeelte:
 
 - de leeftijdsgroep wijzigen, met de vuistregels die de app daarvoor gebruikt;
 - de kaartsoort: kinderen beginnen op een eenvoudige kaart (groen, water, wegen en namen);
@@ -66,8 +63,8 @@ Nodig: een Mac met Xcode 16 of nieuwer en een iPhone met iOS 17 of nieuwer.
 
 | Map | Inhoud |
 | --- | --- |
-| `Hike/` | De app (SwiftUI + MapKit). De huisstijl staat in `Hike/Brand/`, de schermen in `Hike/Screens/`. |
-| `HikeCore/` | Swift-package zonder Apple-afhankelijkheden: routemodel, statistiek, GPX, opslag, de clients voor routes en zoeken, en de kindlogica (`KidProfile`, `LoopPlanner`, `Discovery`, `Passport`). |
+| `Hike/` | De app (SwiftUI + MapKit). De huisstijl en de animaties staan in `Hike/Brand/`, de schermen in `Hike/Screens/`. |
+| `HikeCore/` | Swift-package zonder Apple-afhankelijkheden: routemodel, statistiek, GPX, opslag, de clients voor routes en zoeken, en de kindlogica (`KidProfile`, `LoopPlanner`, `Discovery`, `Passport`, `WalkerLevel`). |
 | `HikeTests/` | Unit-tests van de planner met nagebootste diensten: rondjes maken en bijsturen, plekken onderweg, het paspoort. |
 | `HikeUITests/` | Rooktest die de echte app bedient zoals een kind en een ouder dat doen. |
 
