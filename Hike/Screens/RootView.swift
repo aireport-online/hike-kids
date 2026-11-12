@@ -48,8 +48,9 @@ struct RootView: View {
             .accessibilityHidden(channel != nil)
 
             // The map stays ready behind the menu: building it only when its tile is tapped
-            // makes the opening stutter, and this way it also remembers where it was.
-            ContentView(profile: profile, onMenu: { show(nil) })
+            // makes the opening stutter, and this way it also remembers where it was. Its
+            // buttons and panel only exist while the channel is open.
+            ContentView(profile: profile, isActive: channel == .plan, onMenu: { show(nil) })
                 .scaleEffect(channel == .plan || reduceMotion ? 1 : 0.1, anchor: planOrigin)
                 .opacity(channel == .plan ? 1 : 0)
                 .allowsHitTesting(channel == .plan)
@@ -89,13 +90,23 @@ struct RootView: View {
             // Always on screen, see `body`.
             EmptyView()
         case .routes:
-            SavedRoutesView(profile: profile, onMenu: { show(nil) }, onOpened: { show(.plan) })
+            SavedRoutesView(profile: profile, onMenu: { show(nil) }, onOpened: { showRouteOnMap() })
         case .passport:
             PassportView(onMenu: { show(nil) })
         case .parentGate:
             ParentGateView(onMenu: { show(nil) }, onPassed: { show(.parents) })
         case .parents:
-            ParentsView(ageGroupRaw: $ageGroupRaw, onMenu: { show(nil) }, onImported: { show(.plan) })
+            ParentsView(ageGroupRaw: $ageGroupRaw, onMenu: { show(nil) }, onImported: { showRouteOnMap() })
+        }
+    }
+
+    /// Opens the map on a route that was just loaded. The route is framed once more when the
+    /// panel is in place, so that it is not hidden behind it.
+    private func showRouteOnMap() {
+        show(.plan)
+        Task {
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            model.fitRoute()
         }
     }
 

@@ -7,6 +7,9 @@ struct ContentView: View {
     @Environment(PlannerModel.self) private var model
 
     let profile: KidProfile
+    /// Whether the channel is open. The map itself stays alive behind the menu, because
+    /// building a map is slow; everything on top of it only exists while the channel is open.
+    var isActive = true
     var onMenu: () -> Void
 
     // Children start on the simple map without the web of marked trails; a parent can switch
@@ -53,25 +56,28 @@ struct ContentView: View {
                 onTapSearchPin: { model.addSearchPinToRoute() }
             )
             .ignoresSafeArea()
+            .accessibilityHidden(!isActive)
 
-            VStack(spacing: 0) {
-                topControls
-                Spacer(minLength: 0)
+            if isActive {
                 VStack(spacing: 0) {
-                    attribution
-                    RoutePanel(profile: profile, onSave: { promptForSave() })
+                    topControls
+                    Spacer(minLength: 0)
+                    VStack(spacing: 0) {
+                        attribution
+                        RoutePanel(profile: profile, onSave: { promptForSave() })
+                    }
+                    .background { heightReader { bottomInset = $0 } }
                 }
-                .background { heightReader { bottomInset = $0 } }
+                // The keyboard of the save prompt must not push the map's controls up.
+                .ignoresSafeArea(.keyboard)
             }
-            // The keyboard of the save prompt must not push the map's controls up.
-            .ignoresSafeArea(.keyboard)
 
-            if showsSaved {
+            if showsSaved, isActive {
                 savedToast
                     .transition(.scale(scale: 0.6).combined(with: .opacity))
             }
 
-            if isNamingRoute {
+            if isNamingRoute, isActive {
                 SavePrompt(
                     name: $saveName,
                     onCancel: { isNamingRoute = false },

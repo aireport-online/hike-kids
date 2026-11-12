@@ -102,6 +102,16 @@ final class PlanningFlowUITests: XCTestCase {
         Thread.sleep(forTimeInterval: 1)
         attachScreenshot(of: app, named: "10-mijn-wandelingen")
 
+        // A note rather than an assertion: is what lies behind an open channel out of reach?
+        let note = XCTAttachment(string: """
+            tile-plan reachable: \(app.buttons["tile-plan"].exists)
+            maps: \(app.maps.count)
+            searchButton reachable: \(app.buttons["searchButton"].exists)
+            """)
+        note.name = "diagnose-achtergrond"
+        note.lifetime = .keepAlways
+        add(note)
+
         // Stamp it as walked: confetti, stars, and a new level for a walk of this length.
         walked.tap()
         let rewardDone = app.buttons["rewardDone"]
