@@ -78,12 +78,10 @@ struct PassportView: View {
                 }
             }
         }
-        .onAppear {
-            // The bar fills up as the channel opens.
-            shownProgress = 0
-            withAnimation(Motion.arrive.delay(0.35)) {
-                shownProgress = level.progress
-            }
+        .task {
+            // The bar fills up once the channel has opened.
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            shownProgress = level.progress
         }
     }
 

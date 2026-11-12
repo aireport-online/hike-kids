@@ -34,6 +34,10 @@ struct HomeView: View {
                 VStack(spacing: 14) {
                     greeting(level: passport.level)
 
+                    // Whatever height is left over is shared out between the blocks, so the
+                    // menu fills a tall screen instead of leaving one empty gap.
+                    Spacer(minLength: 0)
+
                     LazyVGrid(columns: columns, spacing: 14) {
                         tile(.plan, "Nieuwe wandeling", image: "TilePlan", order: 0, highlighted: true, screen: screen.size)
                         tile(.routes, "Mijn wandelingen", image: "TileRoutes", order: 1, screen: screen.size)
@@ -42,6 +46,13 @@ struct HomeView: View {
                     }
 
                     Spacer(minLength: 0)
+
+                    // On a short screen the tiles need the room.
+                    if screen.size.height >= 700 {
+                        stampStrip(passport: passport, screen: screen.size)
+                        Spacer(minLength: 0)
+                    }
+
                     bottomBar(passport: passport, screen: screen.size)
                 }
                 .padding(.horizontal, 16)
@@ -110,7 +121,7 @@ struct HomeView: View {
                     Image(image)
                         .resizable()
                         .scaledToFill()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: Brand.tileCorner - 8))
                     Text(title)
                         .font(.sign(17, relativeTo: .headline))
@@ -130,6 +141,60 @@ struct HomeView: View {
         }
         .aspectRatio(1.05, contentMode: .fit)
         .popIn(delay: 0.08 + Double(order) * 0.09)
+    }
+
+    // MARK: - Stamps
+
+    /// The stamp collection at a glance: earned stamps in colour, the rest still to be won.
+    private func stampStrip(passport: Passport, screen: CGSize) -> some View {
+        GeometryReader { proxy in
+            Button {
+                taps += 1
+                let frame = proxy.frame(in: .named("home"))
+                onOpen(.passport, UnitPoint(
+                    x: 0.5,
+                    y: screen.height > 0 ? frame.midY / screen.height : 0.75
+                ))
+            } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Stempels: \(passport.earnedCount) van \(passport.badges.count)")
+                        .font(.sign(16, relativeTo: .subheadline))
+                        .foregroundStyle(Brand.line)
+                    HStack(spacing: 6) {
+                        ForEach(passport.badges) { badge in
+                            Text(badge.emoji)
+                                .font(.system(size: 17))
+                                .grayscale(badge.isEarned ? 0 : 1)
+                                .opacity(badge.isEarned ? 1 : 0.3)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 34)
+                                .background(
+                                    badge.isEarned ? Brand.yellow : Brand.chrome.opacity(0.1),
+                                    in: Capsule()
+                                )
+                                .overlay {
+                                    Capsule().strokeBorder(
+                                        badge.isEarned ? Brand.ink.opacity(0.8) : Brand.chrome.opacity(0.35),
+                                        style: StrokeStyle(lineWidth: 1.5, dash: badge.isEarned ? [] : [4, 4])
+                                    )
+                                }
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .leading)
+                .card()
+                .contentShape(RoundedRectangle(cornerRadius: Brand.tileCorner))
+            }
+            .buttonStyle(BounceButtonStyle(pressedScale: 0.96))
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel("Stempels: \(passport.earnedCount) van \(passport.badges.count). Open het paspoort")
+            .accessibilityIdentifier("homeStamps")
+        }
+        .frame(height: 84)
+        .popIn(delay: 0.46)
     }
 
     // MARK: - Bottom bar
@@ -205,7 +270,6 @@ struct HomeView: View {
             .padding(.bottom, 96)
         }
         .frame(maxWidth: 560)
-        .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(Motion.press) { tipIndex = nil }
         }

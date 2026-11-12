@@ -20,6 +20,9 @@ struct RootView: View {
     @State private var channel: Channel?
     /// Where on the screen the opened tile sits, as a fraction of the screen.
     @State private var origin = UnitPoint.center
+    /// The same for the map, which always grows out of its own tile. It starts near where
+    /// that tile is, so that the first opening does not drift across the screen.
+    @State private var planOrigin = UnitPoint(x: 0.27, y: 0.34)
 
     private var profile: KidProfile {
         KidProfile(ageGroup: AgeGroup(rawValue: ageGroupRaw) ?? .middle)
@@ -27,21 +30,37 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
+            // Behind everything, so nothing bare shows while one channel makes way for another.
+            Pinstripes()
+
             HomeView(profile: profile) { channel, anchor in
-                origin = anchor
+                if channel == .plan {
+                    planOrigin = anchor
+                } else {
+                    origin = anchor
+                }
                 show(channel)
             }
             // The menu steps back while a channel is open.
-            .scaleEffect(channel == nil ? 1 : 1.1)
+            .scaleEffect(channel == nil || reduceMotion ? 1 : 1.1)
             .opacity(channel == nil ? 1 : 0)
             .allowsHitTesting(channel == nil)
             .accessibilityHidden(channel != nil)
 
-            if let channel {
+            // The map stays ready behind the menu: building it only when its tile is tapped
+            // makes the opening stutter, and this way it also remembers where it was.
+            ContentView(profile: profile, onMenu: { show(nil) })
+                .scaleEffect(channel == .plan || reduceMotion ? 1 : 0.1, anchor: planOrigin)
+                .opacity(channel == .plan ? 1 : 0)
+                .allowsHitTesting(channel == .plan)
+                .accessibilityHidden(channel != .plan)
+                .zIndex(1)
+
+            if let channel, channel != .plan {
                 channelView(channel)
                     .id(channel)
                     .transition(reduceMotion ? .opacity : .scale(scale: 0.1, anchor: origin).combined(with: .opacity))
-                    .zIndex(1)
+                    .zIndex(2)
             }
         }
         .tint(Brand.line)
@@ -67,7 +86,8 @@ struct RootView: View {
     private func channelView(_ channel: Channel) -> some View {
         switch channel {
         case .plan:
-            ContentView(profile: profile, onMenu: { show(nil) })
+            // Always on screen, see `body`.
+            EmptyView()
         case .routes:
             SavedRoutesView(profile: profile, onMenu: { show(nil) }, onOpened: { show(.plan) })
         case .passport:

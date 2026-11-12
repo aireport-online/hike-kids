@@ -12,7 +12,8 @@ struct RewardView: View {
     var onDone: () -> Void
 
     @State private var start = Date()
-    @State private var shownProgress = 0.0
+    /// Nil until the bar starts filling; until then it shows where the walker was.
+    @State private var shownProgress: Double?
     @State private var shownStars = 0
 
     private var leveledUp: Bool {
@@ -56,7 +57,7 @@ struct RewardView: View {
                     }
                     .font(.text(15, relativeTo: .subheadline))
                     .foregroundStyle(Brand.chrome)
-                    LevelBar(progress: shownProgress, height: 18)
+                    LevelBar(progress: shownProgress ?? (leveledUp ? 0 : before.level.progress), height: 18)
                 }
                 .popIn(delay: 0.2)
 
@@ -104,16 +105,14 @@ struct RewardView: View {
                 .ignoresSafeArea()
         }
         .sensoryFeedback(.success, trigger: start)
-        .onAppear {
-            start = Date()
-            // The bar starts where the walker was (or empty on a new level) and fills up.
-            shownProgress = leveledUp ? 0 : before.level.progress
-            withAnimation(Motion.arrive.delay(0.45)) {
-                shownProgress = after.level.progress
-            }
-            withAnimation(Motion.arrive.delay(0.3)) {
-                shownStars = stars
-            }
+        .onAppear { start = Date() }
+        .task {
+            // The stars and the bar wait until the card has arrived, so the child sees them
+            // pop and fill. The bar starts where the walker was, or empty on a new level.
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            shownStars = stars
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            shownProgress = after.level.progress
         }
     }
 }

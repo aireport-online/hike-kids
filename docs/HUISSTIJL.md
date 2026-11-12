@@ -34,6 +34,8 @@ In de donkere modus worden wit en nevel donkergrijs; gloed en geel blijven.
   blauwe rand die zacht ademt.
 - **Ronde knoppen** met een blauwe ring: terug naar het menu, waar ben ik, stap terug.
 - **Borden**: bewaarde wandelingen blijven gele wegwijzerborden aan een paal.
+- **De stempelstrook** op het menu toont alle acht stempels: gehaalde in geel, de rest grijs
+  met een stippelrand.
 - **De balk onderaan het menu** heeft links en rechts een ronde knop en in het midden de klok.
 
 ![De vier tegels](kanalen/tegels.jpg)

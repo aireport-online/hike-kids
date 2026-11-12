@@ -385,16 +385,20 @@ final class PlannerModel {
         return plan.isLoop ? "Rondje \(place)" : "Wandeling bij \(place)"
     }
 
-    func save(name: String) {
-        guard let route = currentRoute(named: name) else { return }
+    /// Saves the route under `name`. Returns whether it was saved.
+    @discardableResult
+    func save(name: String) -> Bool {
+        guard let route = currentRoute(named: name) else { return false }
         do {
             try store.save(route)
             currentRouteID = route.id
             currentRouteName = route.name
             hasUnsavedChanges = false
             savedRoutes = store.all()
+            return true
         } catch {
             alertMessage = "Opslaan is mislukt: \(error.localizedDescription)"
+            return false
         }
     }
 

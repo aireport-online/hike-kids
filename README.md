@@ -14,7 +14,7 @@ met animaties, sterren en niveaus. Zie [docs/HUISSTIJL.md](docs/HUISSTIJL.md).
 ## Wat een kind ermee doet
 
 De app opent als het hoofdmenu van een spelcomputer: vier grote tegels, Mo die zwaait, je
-niveau en onderaan een klok. Alles veert en gloeit zacht.
+niveau, je stempels op een rij en onderaan een klok. Alles veert en gloeit zacht.
 
 1. **Hoe oud ben jij?** – 4–5, 6–8 of 9–12 jaar. Daar hangt van af hoe ver en hoe snel.
 2. **Nieuwe wandeling** – de kaart groeit uit de tegel. Tik waar je wilt beginnen, of zoek een plek.

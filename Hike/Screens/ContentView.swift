@@ -22,6 +22,7 @@ struct ContentView: View {
     /// Whether the save prompt is open. Kept apart from the name: the text field writes an empty
     /// name back while it is being taken away, and that must not open the prompt again.
     @State private var isNamingRoute = false
+    @State private var isPreparingSave = false
     @State private var saveName = ""
     /// Counts saves, to show "Bewaard!" for a moment after each one.
     @State private var saves = 0
@@ -62,6 +63,8 @@ struct ContentView: View {
                 }
                 .background { heightReader { bottomInset = $0 } }
             }
+            // The keyboard of the save prompt must not push the map's controls up.
+            .ignoresSafeArea(.keyboard)
 
             if showsSaved {
                 savedToast
@@ -73,9 +76,11 @@ struct ContentView: View {
                     name: $saveName,
                     onCancel: { isNamingRoute = false },
                     onSave: {
-                        model.save(name: saveName)
+                        let saved = model.save(name: saveName)
                         isNamingRoute = false
-                        saves += 1
+                        if saved {
+                            saves += 1
+                        }
                     }
                 )
                 .transition(.opacity)
@@ -87,7 +92,7 @@ struct ContentView: View {
             // "Bewaard!" pops up after a save and leaves by itself.
             guard saves > 0 else { return }
             withAnimation(Motion.arrive) { showsSaved = true }
-            try? await Task.sleep(nanoseconds: 2_200_000_000)
+            try? await Task.sleep(nanoseconds: 3_500_000_000)
             withAnimation(.easeIn(duration: 0.25)) { showsSaved = false }
         }
         .sheet(isPresented: $showsSearch) {
@@ -201,8 +206,12 @@ struct ContentView: View {
     }
 
     private func promptForSave() {
+        // Looking up a name can take a moment; a second tap in the meantime does nothing.
+        guard !isPreparingSave, !isNamingRoute else { return }
+        isPreparingSave = true
         Task {
             saveName = await model.suggestedName()
+            isPreparingSave = false
             isNamingRoute = true
         }
     }

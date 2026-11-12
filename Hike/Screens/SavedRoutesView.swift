@@ -128,7 +128,10 @@ struct SavedRoutesView: View {
     }
 
     private func requestOpen(_ route: HikeRoute) {
-        if model.hasUnsavedChanges, model.isComplete, route.id != model.currentRouteID {
+        if route.id == model.currentRouteID {
+            // Already on the map, perhaps with changes: show it as it is.
+            onOpened()
+        } else if model.hasUnsavedChanges, model.isComplete, route.id != model.currentRouteID {
             routeAwaitingConfirmation = route
         } else {
             open(route)

@@ -51,7 +51,7 @@ private struct Floating: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        if reduceMotion {
+        if reduceMotion || amplitude == 0 {
             content
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 30)) { timeline in
@@ -117,11 +117,13 @@ struct Confetti: View {
     var count = 70
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Set once the last piece has fallen, so the canvas stops redrawing.
+    @State private var isDone = false
 
     private static let colours: [Color] = [Brand.yellow, Brand.glow, Brand.grass, Brand.blaze, .white]
 
     var body: some View {
-        if reduceMotion {
+        if reduceMotion || isDone {
             EmptyView()
         } else {
             TimelineView(.animation) { timeline in
@@ -135,6 +137,10 @@ struct Confetti: View {
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+            .task {
+                try? await Task.sleep(nanoseconds: UInt64((duration + 0.5) * 1_000_000_000))
+                isDone = true
+            }
         }
     }
 
