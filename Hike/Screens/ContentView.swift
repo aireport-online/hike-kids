@@ -50,6 +50,7 @@ struct ContentView: View {
                 camera: model.camera,
                 topInset: topInset,
                 bottomInset: bottomInset,
+                isHiddenFromAccessibility: !isActive,
                 onTap: { model.addWaypoint($0) },
                 onMoveWaypoint: { id, coordinate in model.moveWaypoint(id: id, to: coordinate) },
                 onSelectWaypoint: { model.selectedWaypointID = $0 },

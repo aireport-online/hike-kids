@@ -45,6 +45,9 @@ struct RootView: View {
             .scaleEffect(channel == nil || reduceMotion ? 1 : 1.1)
             .opacity(channel == nil ? 1 : 0)
             .allowsHitTesting(channel == nil)
+            // Hiding alone left the tiles within reach of assistive technology; as one
+            // element without children the menu is really gone while a channel is open.
+            .accessibilityElement(children: channel == nil ? .contain : .ignore)
             .accessibilityHidden(channel != nil)
 
             // The map stays ready behind the menu: building it only when its tile is tapped

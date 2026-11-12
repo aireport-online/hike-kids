@@ -18,6 +18,8 @@ struct MapView: UIViewRepresentable {
     /// Space at the top and bottom covered by controls, so the map keeps its content clear of them.
     var topInset: CGFloat
     var bottomInset: CGFloat
+    /// True while the map waits behind the menu: VoiceOver must not find it there.
+    var isHiddenFromAccessibility = false
 
     var onTap: (Coordinate) -> Void
     var onMoveWaypoint: (Waypoint.ID, Coordinate) -> Void
@@ -67,6 +69,9 @@ struct MapView: UIViewRepresentable {
         coordinator.parent = self
         if mapView.showsUserLocation != showsUserLocation {
             mapView.showsUserLocation = showsUserLocation
+        }
+        if mapView.accessibilityElementsHidden != isHiddenFromAccessibility {
+            mapView.accessibilityElementsHidden = isHiddenFromAccessibility
         }
         coordinator.applyInsets(to: mapView)
         coordinator.applyTiles(to: mapView)
