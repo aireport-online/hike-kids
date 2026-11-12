@@ -1,5 +1,11 @@
 # Hike Kids
 
+## Over deze publicatie
+
+Deze broncode is gedeeld bij de AI Report-masterclass over software bouwen met AI.
+Je kunt het project bestuderen, zelf draaien, forken en aanpassen onder de [MIT-licentie](LICENSE).
+Dit is een voorbeeldproject uit de masterclass; er wordt geen gehoste dienst of doorlopend onderhoud aangeboden.
+
 iPhone-app waarmee kinderen van 4 tot 12 jaar zelf een wandeling maken, overal in Europa.
 Mo de marmot vraagt waar je wilt beginnen en hoe ver je wilt lopen, en tekent dan een rondje
 over wandelpaden dat bij je leeftijd past.
