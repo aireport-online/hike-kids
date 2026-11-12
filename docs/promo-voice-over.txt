@@ -1,0 +1,20 @@
+Voice-over van docs/hike-kids-promo.mp4
+Stem: "Daantje" (ElevenLabs, model eleven_v4). De woorden tussen haken sturen de toon.
+
+[excited] Dit is Hike Kids! [warmly] De app waarmee kinderen zelf een wandeling maken, overal in Europa.
+
+[pause] Mo de marmot helpt je op weg. Vertel hoe oud je bent, en je komt in het menu. Net een spelcomputer!
+
+[pause] Tik op Nieuwe wandeling, zoek een plek, en tik op de kaart waar je wilt starten.
+
+[pause] Kies hoe ver je wilt lopen, en Mo tekent een rondje dat bij jou past. Je ziet meteen hoeveel sterren het waard is, hoe lang je onderweg bent, en hoeveel stappen het zijn.
+
+[pause] Liever de andere kant op? Eén tik. Bewaar je wandeling, en ze hangt aan de wegwijzer.
+
+[pause] [excited] En heb je de wandeling gelopen? Dan krijg je confetti, een stempel, en groei je naar een nieuw niveau!
+
+[pause] [warmly] In je paspoort spaar je alle 8 stempels, van Eerste stappen tot Bergbeklimmer.
+
+[pause] En voor ouders: geen account, geen reclame en geen aankopen. Achter een som stel je de leeftijd en de kaart in.
+
+[pause] [happy] Hike Kids. Waar gaan we heen?

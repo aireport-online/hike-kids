@@ -41,6 +41,10 @@ Alle schermen staan in [docs/schermen](docs/schermen); een video van een minuut 
 wordt gebruikt staat in [docs/hike-kids-2-gebruik.mp4](docs/hike-kids-2-gebruik.mp4). De beelden
 komen uit de automatische test in de simulator.
 
+Er is ook een promofilmpje van een kleine minuut met voice-over:
+[docs/hike-kids-promo.mp4](docs/hike-kids-promo.mp4) (tekst in
+[docs/promo-voice-over.txt](docs/promo-voice-over.txt)).
+
 ## Voor ouders
 
 Achter de tegel "Voor ouders" en een som (bijvoorbeeld 7 × 8) zit het oudergedeelte:
