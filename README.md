@@ -31,6 +31,16 @@ niveau, je stempels op een rij en onderaan een klok. Alles veert en gloeit zacht
 8. **Paspoort** – je niveau (van Beginner tot Wandelkampioen), je kilometers en acht stempels
    om te verdienen.
 
+## Schermen
+
+| Menu | Hoe ver? | Je rondje | Beloning | Paspoort |
+| --- | --- | --- | --- | --- |
+| ![Het menu](docs/schermen/02-menu.jpg) | ![Hoe ver wil je lopen](docs/schermen/05-hoe-ver.jpg) | ![Een rondje](docs/schermen/07-andere-kant.jpg) | ![Beloning](docs/schermen/11-beloning.jpg) | ![Paspoort](docs/schermen/12-paspoort.jpg) |
+
+Alle schermen staan in [docs/schermen](docs/schermen); een video van een minuut waarin de app
+wordt gebruikt staat in [docs/hike-kids-2-gebruik.mp4](docs/hike-kids-2-gebruik.mp4). De beelden
+komen uit de automatische test in de simulator.
+
 ## Voor ouders
 
 Achter de tegel "Voor ouders" en een som (bijvoorbeeld 7 × 8) zit het oudergedeelte:
