@@ -46,6 +46,8 @@ struct TileSource: Equatable {
 }
 
 enum MapStyle: String, CaseIterable, Identifiable {
+    /// The children's map: green, water, roads and place names, and little else.
+    case simple
     case topo
     case street
     case apple
@@ -55,6 +57,7 @@ enum MapStyle: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .simple: return "Eenvoudig"
         case .topo: return "Topografisch"
         case .street: return "OpenStreetMap"
         case .apple: return "Apple Kaarten"
@@ -64,6 +67,7 @@ enum MapStyle: String, CaseIterable, Identifiable {
 
     var subtitle: String {
         switch self {
+        case .simple: return "Rustige kaart voor kinderen: groen, water en weinig tekst"
         case .topo: return "Hoogtelijnen, paden en hutten"
         case .street: return "Gedetailleerde paden, ook ver ingezoomd"
         case .apple: return "Snel en rustig kaartbeeld"
@@ -76,7 +80,7 @@ enum MapStyle: String, CaseIterable, Identifiable {
         switch self {
         case .topo: return .openTopoMap
         case .street: return .openStreetMap
-        case .apple, .satellite: return nil
+        case .simple, .apple, .satellite: return nil
         }
     }
 
@@ -87,7 +91,7 @@ enum MapStyle: String, CaseIterable, Identifiable {
             parts.append("© OpenStreetMap, SRTM · OpenTopoMap (CC-BY-SA)")
         case .street:
             parts.append("© OpenStreetMap-bijdragers")
-        case .apple, .satellite:
+        case .simple, .apple, .satellite:
             break
         }
         if showsTrails {

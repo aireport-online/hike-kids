@@ -35,6 +35,13 @@ kapitalen. Fredoka valt onder de SIL Open Font License; de licentie staat bij de
 - **Plekken onderweg** zijn plaatjes op een wit rondje: 🛝 🔭 🧺 🐐 🍦 🏰 💦 ⛰️.
 - **Stempels** in het wandelpaspoort zijn geel als ze gehaald zijn en grijs gestippeld als ze nog te halen zijn.
 
+## Kaart
+
+Kinderen zien een eenvoudige kaart: groen, water, wegen en plaatsnamen, zonder hoogtelijnen,
+zonder het web van gemarkeerde routes en met alleen de plekken waar je als kind naartoe gaat
+(park, dierentuin, strand, camping). De gele route en de plaatjes van plekken onderweg vallen
+daardoor meteen op. De wandelkaarten staan in het oudergedeelte.
+
 ## Taal
 
 Korte zinnen, je en jij, geen vaktaal: "Hoe ver wil je lopen?", "Oeps! Hier vind ik geen

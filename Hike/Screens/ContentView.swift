@@ -5,8 +5,10 @@ import UIKit
 struct ContentView: View {
     @Environment(PlannerModel.self) private var model
 
-    @AppStorage("mapStyle") private var mapStyleRaw = MapStyle.topo.rawValue
-    @AppStorage("showsTrails") private var showsTrails = true
+    // Children start on the simple map without the web of marked trails; a parent can switch
+    // to a hiking map in the parents' corner.
+    @AppStorage("mapStyle") private var mapStyleRaw = MapStyle.simple.rawValue
+    @AppStorage("showsTrails") private var showsTrails = false
     /// Empty until the child has said how old they are.
     @AppStorage("ageGroup") private var ageGroupRaw = ""
 
@@ -27,7 +29,7 @@ struct ContentView: View {
         var id: String { rawValue }
     }
 
-    private var mapStyle: MapStyle { MapStyle(rawValue: mapStyleRaw) ?? .topo }
+    private var mapStyle: MapStyle { MapStyle(rawValue: mapStyleRaw) ?? .simple }
     private var profile: KidProfile { KidProfile(ageGroup: AgeGroup(rawValue: ageGroupRaw) ?? .middle) }
 
     var body: some View {

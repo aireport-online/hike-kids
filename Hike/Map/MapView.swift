@@ -148,9 +148,19 @@ struct MapView: UIViewRepresentable {
             mapView.removeOverlays(tileOverlays)
             tileOverlays = []
 
-            if parent.style == .satellite {
+            switch parent.style {
+            case .satellite:
                 mapView.preferredConfiguration = MKHybridMapConfiguration(elevationStyle: .flat)
-            } else {
+            case .simple:
+                // Apple's own map with nearly all of its little icons switched off: what is left
+                // is land, water, roads and names, plus the places a child goes out for.
+                let configuration = MKStandardMapConfiguration(elevationStyle: .flat)
+                configuration.pointOfInterestFilter = MKPointOfInterestFilter(including: [
+                    .park, .nationalPark, .zoo, .aquarium, .amusementPark, .beach, .campground
+                ])
+                configuration.showsTraffic = false
+                mapView.preferredConfiguration = configuration
+            default:
                 mapView.preferredConfiguration = MKStandardMapConfiguration(elevationStyle: .flat)
             }
 

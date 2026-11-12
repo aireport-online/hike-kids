@@ -39,7 +39,9 @@ Hoe je de app gebruikt, in een minuut: [docs/hike-kids-gebruik.mp4](docs/hike-ki
 Achter een som (bijvoorbeeld 7 × 8) zit het oudergedeelte:
 
 - de leeftijdsgroep wijzigen, met de vuistregels die de app daarvoor gebruikt;
-- de kaartsoort en de laag met gemarkeerde wandelroutes;
+- de kaartsoort: kinderen beginnen op een eenvoudige kaart (groen, water, wegen en namen);
+  hier staan ook de topografische kaart, OpenStreetMap, satelliet en de laag met gemarkeerde
+  wandelroutes;
 - een route omkeren, een stuk als rechte lijn tekenen, GPX delen en importeren.
 
 De vuistregels (snelheid, pauzes, wat "ver" is) zijn voorzichtig gekozen en staan in
